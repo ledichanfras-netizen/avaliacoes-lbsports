@@ -49,22 +49,17 @@ export const calculateVo2maxZones = (assessment: Vo2max) => {
         maxBpm: Math.round(maxHeartRate * (z.maxHrPercent / 100)),
     }));
 
-    const pacePercentages = [60, 65, 70, 75, 80, 85, 90, 95, 100];
-    const paces = pacePercentages.map(p => {
+    const intensityPercentages = [60, 65, 70, 75, 80, 85, 90, 95, 100];
+    const trainingPaces = intensityPercentages.map(p => {
         const speed = vam * (p / 100);
         const pace = speed > 0 ? 60 / speed : 0;
         return {
             percentage: p,
             pace: formatPace(pace),
+            speed: speed.toFixed(1),
         };
     });
     
-    const vamPercentages = [60, 65, 70, 75, 80, 85, 90, 95, 100];
-    const vams = vamPercentages.map(p => ({
-        percentage: p,
-        speed: (vam * (p / 100)).toFixed(1),
-    }));
-
     const distances = [100, 200, 300, 400, 500, 600, 700, 800, 900];
     const intensities = [120, 110, 100, 90, 80, 70, 60];
     
@@ -88,7 +83,7 @@ export const calculateVo2maxZones = (assessment: Vo2max) => {
         }
     });
 
-    return { trainingZones, paces, vams, partialVelocities };
+    return { trainingZones, trainingPaces, partialVelocities };
 };
 
 export const formatDate = (dateString: string) => {

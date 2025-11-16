@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect } from 'react';
 // FIX: Import GeneralStrengthExercise to use enum members directly and ensure type safety.
 import { Athlete, AssessmentData, AssessmentType, GeneralStrengthExercise } from './types';
@@ -53,10 +54,21 @@ const MOCK_ATHLETES: Athlete[] = [
     }
   ];
 
+// Function to save athletes to localStorage
+const saveAthletesToStorage = (athletesToSave: Athlete[]) => {
+    try {
+        localStorage.setItem('lb_sports_athletes', JSON.stringify(athletesToSave));
+    } catch (error) {
+        console.error("Failed to save athletes to localStorage", error);
+        toast.error("Erro ao salvar os dados.");
+    }
+};
+
 export const useAthletes = () => {
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Effect to load athletes from localStorage on initial render
   useEffect(() => {
     try {
       const storedAthletes = localStorage.getItem('lb_sports_athletes');
@@ -73,14 +85,10 @@ export const useAthletes = () => {
     }
   }, []);
 
+  // Effect to automatically save athletes to localStorage whenever the data changes
   useEffect(() => {
     if (!loading) {
-      try {
-        localStorage.setItem('lb_sports_athletes', JSON.stringify(athletes));
-      } catch (error) {
-        console.error("Failed to save athletes to localStorage", error);
-        toast.error("Erro ao salvar os dados.");
-      }
+      saveAthletesToStorage(athletes);
     }
   }, [athletes, loading]);
 
@@ -125,6 +133,26 @@ export const useAthletes = () => {
     toast.success(`Nova avaliação de ${type} adicionada.`);
   };
 
+  const updateAssessment = (athleteId: string, type: AssessmentType, updatedData: AssessmentData) => {
+    setAthletes(prev => prev.map(athlete => {
+        if (athlete.id === athleteId) {
+            const updatedAssessmentsList = athlete.assessments[type]
+                .map(asm => asm.id === updatedData.id ? updatedData : asm)
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  return { athletes, loading, addAthlete, updateAthlete, addAssessment };
+            return {
+                ...athlete,
+                assessments: {
+                    ...athlete.assessments,
+                    [type]: updatedAssessmentsList
+                }
+            };
+        }
+        return athlete;
+    }));
+    toast.success(`Avaliação de ${type} atualizada.`);
+  };
+
+
+  return { athletes, loading, addAthlete, updateAthlete, addAssessment, updateAssessment };
 };
