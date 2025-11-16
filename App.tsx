@@ -570,7 +570,7 @@ const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, 
 
             <div>
                 <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Composição Corporal (kg)</h4>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" aspect={2.5}>
                     <AreaChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
@@ -735,7 +735,7 @@ const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?:
                 <>
                     <div>
                         <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Força (Média D/E)</h4>
-                        <ResponsiveContainer width="100%" height={250}>
+                        <ResponsiveContainer width="100%" aspect={3}>
                             <LineChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
                                 <XAxis dataKey="date" stroke="#9CA3AF"/>
@@ -749,7 +749,7 @@ const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?:
                     </div>
                     <div>
                         <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Razão I/Q (%)</h4>
-                        <ResponsiveContainer width="100%" height={250}>
+                        <ResponsiveContainer width="100%" aspect={3}>
                              <LineChart data={iqEvolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
                                 <XAxis dataKey="date" stroke="#9CA3AF"/>
@@ -793,7 +793,6 @@ const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boo
     const { latestByExercise, evolutionData } = useMemo(() => {
         if (assessments.length === 0) return { latestByExercise: [], evolutionData: [] };
 
-        // FIX: Corrected accumulator type for type safety.
         const grouped = assessments.reduce((acc: Record<GeneralStrengthExercise, GeneralStrength[]>, a) => {
             if (!acc[a.exercise]) {
                 acc[a.exercise] = [];
@@ -802,20 +801,15 @@ const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boo
             return acc;
         }, {} as Record<GeneralStrengthExercise, GeneralStrength[]>);
 
-        // FIX: Safely iterate over enum values to ensure type safety.
-        const latestByExercise = (Object.keys(GeneralStrengthExercise) as Array<keyof typeof GeneralStrengthExercise>).map(key => {
-            const ex = GeneralStrengthExercise[key];
+        // FIX: Iterate over enum values directly using Object.values for better type safety and simplicity.
+        const latestByExercise = Object.values(GeneralStrengthExercise).map(ex => {
             return grouped[ex]?.[0];
         }).filter(Boolean) as GeneralStrength[];
 
-        // FIX: Use spread syntax to ensure `dates` is correctly typed as `string[]`, which resolves downstream type errors.
-        // FIX: Explicitly typed the sort callback parameters `a` and `b` as `string` to resolve type inference errors.
         const dates = [...new Set(assessments.map(a => a.date))].sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
         const evolutionData = dates.map(date => {
             const entry: { [key: string]: any } = { date: formatDate(date) };
-            // FIX: Safely iterate over enum values to ensure type safety.
-            for (const key of (Object.keys(GeneralStrengthExercise) as Array<keyof typeof GeneralStrengthExercise>)) {
-                const ex = GeneralStrengthExercise[key];
+            for (const ex of Object.values(GeneralStrengthExercise)) {
                 const assessmentForDate = assessments.find(a => a.date === date && a.exercise === ex);
                 entry[ex] = assessmentForDate ? assessmentForDate.load : null;
             }
@@ -852,18 +846,17 @@ const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boo
             </div>
              <div>
                 <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Força (kg)</h4>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" aspect={2.5}>
                     <LineChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
                         <XAxis dataKey="date" stroke="#9CA3AF"/>
                         <YAxis stroke="#9CA3AF" label={{ value: 'Carga (kg)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }} />
                         <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
                         <Legend />
-                        {/* FIX: Safely iterate over enum values to ensure type safety. */}
-                        {(Object.keys(GeneralStrengthExercise) as Array<keyof typeof GeneralStrengthExercise>).map(key => {
-                            const ex = GeneralStrengthExercise[key];
-                            return <Line key={ex} type="monotone" dataKey={ex} stroke={colors[ex]} connectNulls strokeWidth={2} />
-                        })}
+                        {/* FIX: Iterate over enum values directly for better type safety. */}
+                        {Object.values(GeneralStrengthExercise).map(ex => (
+                            <Line key={ex} type="monotone" dataKey={ex} stroke={colors[ex]} connectNulls strokeWidth={2} />
+                        ))}
                     </LineChart>
                 </ResponsiveContainer>
             </div>
@@ -954,7 +947,7 @@ const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessmen
             {assessments.length > 1 && (
                 <div className="mt-8">
                     <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução do Salto</h4>
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" aspect={2.5}>
                         <AreaChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorHeight" x1="0" y1="0" x2="0" y2="1">
