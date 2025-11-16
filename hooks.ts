@@ -113,6 +113,11 @@ export const useAthletes = () => {
     toast.success(`${updatedAthlete.name} atualizado(a) com sucesso!`);
   };
   
+  const deleteAthlete = (athleteId: string) => {
+    setAthletes(prev => prev.filter(a => a.id !== athleteId));
+    toast.success("Atleta excluído com sucesso.");
+  };
+
   const addAssessment = (athleteId: string, type: AssessmentType, data: Omit<AssessmentData, 'id'>) => {
     const newAssessment = {
       ...data,
@@ -153,6 +158,24 @@ export const useAthletes = () => {
     toast.success(`Avaliação de ${type} atualizada.`);
   };
 
+  const deleteAssessment = (athleteId: string, type: AssessmentType, assessmentId: string) => {
+    setAthletes(prev => prev.map(athlete => {
+        if (athlete.id === athleteId) {
+            const updatedAssessmentsList = athlete.assessments[type].filter(asm => asm.id !== assessmentId);
+            const latestAssessments = updatedAssessmentsList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            return {
+                ...athlete,
+                assessments: {
+                    ...athlete.assessments,
+                    [type]: latestAssessments
+                }
+            };
+        }
+        return athlete;
+    }));
+    toast.success(`Avaliação de ${type} excluída com sucesso.`);
+  };
 
-  return { athletes, loading, addAthlete, updateAthlete, addAssessment, updateAssessment };
+
+  return { athletes, loading, addAthlete, updateAthlete, deleteAthlete, addAssessment, updateAssessment, deleteAssessment };
 };

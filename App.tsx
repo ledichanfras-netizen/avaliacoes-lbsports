@@ -71,6 +71,11 @@ const EditIcon: FC<{ className?: string }> = ({ className }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
     </svg>
 );
+const TrashIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.067-2.09 1.02-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+    </svg>
+);
 
 
 // --- LOGO ---
@@ -98,13 +103,28 @@ const Card: FC<{ children: React.ReactNode; className?: string; onClick?: () => 
 );
 
 
-const Button: FC<{ onClick?: () => void; children: React.ReactNode; className?: string, variant?: 'primary' | 'secondary', type?: 'button' | 'submit' }> = ({ onClick, children, className, variant = 'primary', type = 'button' }) => {
+const Button: FC<{ onClick?: () => void; children: React.ReactNode; className?: string, variant?: 'primary' | 'secondary' | 'danger', type?: 'button' | 'submit' }> = ({ onClick, children, className, variant = 'primary', type = 'button' }) => {
     const baseClasses = "px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 no-print";
-    const variantClasses = variant === 'primary' 
-        ? "bg-brand-primary hover:bg-brand-dark text-white shadow-md hover:shadow-lg" 
-        : "bg-gray-600 hover:bg-gray-500 text-gray-100";
-    return <button onClick={onClick} type={type} className={`${baseClasses} ${variantClasses} ${className}`}>{children}</button>;
+    const variantClasses = {
+        primary: "bg-brand-primary hover:bg-brand-dark text-white shadow-md hover:shadow-lg",
+        secondary: "bg-gray-600 hover:bg-gray-500 text-gray-100",
+        danger: "bg-accent-red hover:bg-red-700 text-white"
+    };
+    return <button onClick={onClick} type={type} className={`${baseClasses} ${variantClasses[variant]} ${className}`}>{children}</button>;
 };
+
+const ConfirmationModal: FC<{ message: string; onConfirm: () => void; onCancel: () => void; }> = ({ message, onConfirm, onCancel }) => (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <Card className="max-w-sm">
+            <h3 className="text-lg font-semibold text-white mb-4">Confirmar Ação</h3>
+            <p className="text-gray-300 mb-6">{message}</p>
+            <div className="flex justify-end gap-4">
+                <Button onClick={onCancel} variant="secondary">Cancelar</Button>
+                <Button onClick={onConfirm} variant="danger">Confirmar</Button>
+            </div>
+        </Card>
+    </div>
+);
 
 // --- ANATOMY SVG ---
 const Anatomy: FC<{ highlightedMuscles: ('quadricepsR' | 'quadricepsL' | 'hamstringsR' | 'hamstringsL')[] }> = ({ highlightedMuscles }) => {
@@ -515,7 +535,7 @@ const VO2MaxForm: FC<{ onSave: (data: Omit<Vo2max, 'id'> | Vo2max) => void; onCa
 };
 
 // --- VIEW Components ---
-const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, onEdit: (assessment: Bioimpedance) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, isReadOnly }) => {
+const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, onEdit: (assessment: Bioimpedance) => void, onDelete: (assessmentId: string) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, onDelete, isReadOnly }) => {
     const latest = assessments[0];
 
     const evolutionData = useMemo(() => {
@@ -538,7 +558,12 @@ const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, 
         <div className="space-y-6">
             <div className="flex justify-end items-center gap-2 text-sm text-gray-400">
                 Última avaliação: {formatDate(latest.date)}
-                {!isReadOnly && !isPrinting && <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>}
+                {!isReadOnly && !isPrinting && (
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+                        <button onClick={() => onDelete(latest.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
@@ -612,7 +637,12 @@ const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, 
                         {assessments.slice(1).map(asm => (
                             <div key={asm.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded-md text-sm">
                                 <span>{formatDate(asm.date)} - Peso: {asm.weight.toFixed(1)}kg, %G: {asm.fatPercentage.toFixed(1)}%</span>
-                                {!isReadOnly && <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>}
+                                {!isReadOnly && (
+                                    <div className="flex items-center gap-3">
+                                        <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+                                        <button onClick={() => onDelete(asm.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -622,7 +652,7 @@ const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, 
     );
 };
 
-const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?: boolean, onEdit: (assessment: IsometricStrength) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, isReadOnly }) => {
+const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?: boolean, onEdit: (assessment: IsometricStrength) => void, onDelete: (assessmentId: string) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, onDelete, isReadOnly }) => {
     const latest = assessments[0];
     const [highlightedMuscles, setHighlightedMuscles] = useState<('quadricepsR' | 'quadricepsL' | 'hamstringsR' | 'hamstringsL')[]>([]);
 
@@ -683,7 +713,12 @@ const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?:
          <div className="space-y-8">
              <div className="flex justify-end items-center gap-2 text-sm text-gray-400">
                 Última avaliação: {formatDate(latest.date)}
-                {!isReadOnly && !isPrinting && <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>}
+                {!isReadOnly && !isPrinting && (
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+                        <button onClick={() => onDelete(latest.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
+                    </div>
+                )}
             </div>
              <div className="grid md:grid-cols-2 gap-6 items-center">
                 <div className="space-y-4">
@@ -778,7 +813,12 @@ const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?:
                         {assessments.slice(1).map(asm => (
                             <div key={asm.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded-md text-sm">
                                 <span>{formatDate(asm.date)} - Q: {asm.quadricepsR.toFixed(1)}/{asm.quadricepsL.toFixed(1)}, I: {asm.hamstringsR.toFixed(1)}/{asm.hamstringsL.toFixed(1)}</span>
-                                {!isReadOnly && <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>}
+                                {!isReadOnly && (
+                                    <div className="flex items-center gap-3">
+                                        <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+                                        <button onClick={() => onDelete(asm.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -788,7 +828,7 @@ const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?:
     );
 };
 
-const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boolean, onEdit: (assessment: GeneralStrength) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, isReadOnly }) => {
+const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boolean, onEdit: (assessment: GeneralStrength) => void, onDelete: (assessmentId: string) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, onDelete, isReadOnly }) => {
     const latest = assessments[0];
     const { latestByExercise, evolutionData } = useMemo(() => {
         if (assessments.length === 0) return { latestByExercise: [], evolutionData: [] };
@@ -806,7 +846,8 @@ const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boo
             return grouped[ex]?.[0];
         }).filter(Boolean) as GeneralStrength[];
 
-        const dates = [...new Set(assessments.map(a => a.date))].sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
+        // FIX: Use Array.from(new Set(...)) for better type inference to avoid 'unknown' type on array elements.
+        const dates = Array.from(new Set(assessments.map(a => a.date))).sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
         const evolutionData = dates.map(date => {
             const entry: { [key: string]: any } = { date: formatDate(date) };
             for (const ex of Object.values(GeneralStrengthExercise)) {
@@ -838,7 +879,12 @@ const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boo
                             <p className="text-2xl font-bold text-white">{a.load} <span className="text-base font-normal">kg</span></p>
                             <div className="flex justify-center items-center gap-2 text-xs text-gray-500">
                                 {formatDate(a.date)}
-                                {!isReadOnly && !isPrinting && <button onClick={() => onEdit(a)} className="text-gray-400 hover:text-white"><EditIcon className="w-3 h-3" /></button>}
+                                {!isReadOnly && !isPrinting && (
+                                     <div className="flex items-center gap-2">
+                                        <button onClick={() => onEdit(a)} className="text-gray-400 hover:text-white"><EditIcon className="w-3 h-3" /></button>
+                                        <button onClick={() => onDelete(a.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-3 h-3" /></button>
+                                     </div>
+                                )}
                             </div>
                         </div>
                     )) : <p className="text-gray-500 col-span-3">Nenhum dado recente.</p>}
@@ -870,7 +916,7 @@ const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boo
     );
 };
 
-const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessment: Cmj) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, isReadOnly }) => {
+const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessment: Cmj) => void, onDelete: (assessmentId: string) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, onDelete, isReadOnly }) => {
     const latest = assessments[0];
     if (!latest) return <NoData />;
 
@@ -896,7 +942,12 @@ const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessmen
          <div className="space-y-4">
             <div className="flex justify-end items-center gap-2 text-sm text-gray-400">
                 Última avaliação: {formatDate(latest.date)}
-                {!isReadOnly && !isPrinting && <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>}
+                 {!isReadOnly && !isPrinting && (
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+                        <button onClick={() => onDelete(latest.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
+                    </div>
+                )}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div className="bg-gray-700/50 p-3 rounded">
@@ -984,7 +1035,12 @@ const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessmen
                         {assessments.slice(1).map(asm => (
                             <div key={asm.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded-md text-sm">
                                 <span>{formatDate(asm.date)} - Altura: {asm.height.toFixed(1)}cm, Potência: {asm.power}W</span>
-                                {!isReadOnly && <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>}
+                                {!isReadOnly && (
+                                    <div className="flex items-center gap-3">
+                                        <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+                                        <button onClick={() => onDelete(asm.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -994,7 +1050,7 @@ const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessmen
     );
 };
 
-const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean, onEdit: (assessment: Vo2max) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, isReadOnly }) => {
+const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean, onEdit: (assessment: Vo2max) => void, onDelete: (assessmentId: string) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, onDelete, isReadOnly }) => {
     const latest = assessments[0];
     if (!latest) return <NoData />;
 
@@ -1020,7 +1076,12 @@ const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean, onEdit: (ass
          <div className="space-y-8">
             <div className="flex justify-end items-center gap-2 text-sm text-gray-400">
                 Última avaliação: {formatDate(latest.date)}
-                {!isReadOnly && !isPrinting && <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>}
+                 {!isReadOnly && !isPrinting && (
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+                        <button onClick={() => onDelete(latest.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
+                    </div>
+                )}
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1104,7 +1165,12 @@ const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean, onEdit: (ass
                         {assessments.slice(1).map(asm => (
                             <div key={asm.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded-md text-sm">
                                 <span>{formatDate(asm.date)} - VO₂max: {asm.vo2max.toFixed(1)}, VAM: {asm.vam.toFixed(1)} km/h</span>
-                                {!isReadOnly && <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>}
+                                {!isReadOnly && (
+                                     <div className="flex items-center gap-3">
+                                        <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+                                        <button onClick={() => onDelete(asm.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -1116,7 +1182,7 @@ const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean, onEdit: (ass
 
 // --- ATHLETE COMPONENTS ---
 
-const AthleteForm: FC<{ onSave: (data: Omit<Athlete, 'id' | 'assessments'> | Athlete) => void; onCancel: () => void; athlete?: Athlete }> = ({ onSave, onCancel, athlete }) => {
+const AthleteForm: FC<{ onSave: (data: Omit<Athlete, 'id' | 'assessments'> | Athlete) => void; onCancel: () => void; athlete?: Athlete, onDelete?: (athleteId: string) => void }> = ({ onSave, onCancel, athlete, onDelete }) => {
     const [name, setName] = useState(athlete?.name || '');
     const [dob, setDob] = useState(athlete?.dob || '');
     const [injuryHistory, setInjuryHistory] = useState(athlete?.injuryHistory || '');
@@ -1157,18 +1223,28 @@ const AthleteForm: FC<{ onSave: (data: Omit<Athlete, 'id' | 'assessments'> | Ath
                     <textarea value={injuryHistory} onChange={(e) => setInjuryHistory(e.target.value)} rows={3} className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-brand-primary focus:border-brand-primary"></textarea>
                 </div>
             </div>
-            <div className="mt-6 flex justify-end gap-4">
-                <Button onClick={onCancel} variant="secondary">Cancelar</Button>
-                <Button onClick={handleSubmit}>{athlete ? 'Salvar Alterações' : 'Adicionar Atleta'}</Button>
+            <div className="mt-6 flex justify-between items-center">
+                <div>
+                    {athlete && onDelete && (
+                        <Button onClick={() => onDelete(athlete.id)} variant="danger">
+                            <TrashIcon className="w-5 h-5" /> Excluir Atleta
+                        </Button>
+                    )}
+                </div>
+                <div className="flex gap-4">
+                    <Button onClick={onCancel} variant="secondary">Cancelar</Button>
+                    <Button onClick={handleSubmit}>{athlete ? 'Salvar Alterações' : 'Adicionar Atleta'}</Button>
+                </div>
             </div>
         </Card>
     );
 };
 
-const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: (athleteId: string, type: AssessmentType, data: any) => void; updateAssessment: (athleteId: string, type: AssessmentType, data: any) => void; onExportPDF: (type: AssessmentType | 'all') => void; userRole: 'admin' | 'student'; onEdit: () => void; }> = ({ athlete, onBack, addAssessment, updateAssessment, onExportPDF, userRole, onEdit }) => {
+const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: (athleteId: string, type: AssessmentType, data: any) => void; updateAssessment: (athleteId: string, type: AssessmentType, data: any) => void; deleteAssessment: (athleteId: string, type: AssessmentType, assessmentId: string) => void; onExportPDF: (type: AssessmentType | 'all') => void; userRole: 'admin' | 'student'; onEdit: () => void; onRequestDelete: () => void; }> = ({ athlete, onBack, addAssessment, updateAssessment, deleteAssessment, onExportPDF, userRole, onEdit, onRequestDelete }) => {
     const [addingAssessment, setAddingAssessment] = useState<AssessmentType | null>(null);
     const [editingAssessment, setEditingAssessment] = useState<{type: AssessmentType, data: AssessmentData} | null>(null);
     const [activeTab, setActiveTab] = useState<AssessmentType>('bioimpedance');
+    const [confirmDeleteAssessment, setConfirmDeleteAssessment] = useState<{type: AssessmentType, id: string} | null>(null);
 
     const handleAddAssessment = (type: AssessmentType, data: any) => {
         addAssessment(athlete.id, type, data);
@@ -1178,6 +1254,17 @@ const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: 
     const handleUpdateAssessment = (type: AssessmentType, data: any) => {
         updateAssessment(athlete.id, type, data);
         setEditingAssessment(null);
+    };
+
+    const handleRequestDeleteAssessment = (type: AssessmentType, assessmentId: string) => {
+        setConfirmDeleteAssessment({ type, id: assessmentId });
+    };
+
+    const executeDeleteAssessment = () => {
+        if (confirmDeleteAssessment) {
+            deleteAssessment(athlete.id, confirmDeleteAssessment.type, confirmDeleteAssessment.id);
+            setConfirmDeleteAssessment(null);
+        }
     };
 
     const assessmentMap: { type: AssessmentType; title: string; shortTitle: string, ViewComponent: FC<any>, icon: React.ReactNode }[] = [
@@ -1211,6 +1298,13 @@ const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: 
 
     return (
         <div className="space-y-6">
+            {confirmDeleteAssessment && (
+                <ConfirmationModal 
+                    message={`Tem certeza que deseja excluir esta avaliação de ${confirmDeleteAssessment.type}? Esta ação não pode ser desfeita.`}
+                    onConfirm={executeDeleteAssessment}
+                    onCancel={() => setConfirmDeleteAssessment(null)}
+                />
+            )}
             <div className="flex justify-between items-center mb-4">
                  <Button onClick={onBack} variant="secondary">
                      {userRole === 'admin' ? <><ArrowLeftIcon className="w-5 h-5" /> Voltar</> : <><LogoutIcon className="w-5 h-5" /> Sair</>}
@@ -1223,12 +1317,17 @@ const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: 
                 <div className="flex items-start md:items-center gap-4">
                     <UserIcon className="w-16 h-16 text-brand-secondary flex-shrink-0" />
                     <div className="flex-grow">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
                             <h2 className="text-3xl font-bold text-white">{athlete.name}</h2>
                             {userRole === 'admin' && (
-                                <button onClick={onEdit} className="text-gray-400 hover:text-white transition-colors">
-                                    <EditIcon className="w-5 h-5" />
-                                </button>
+                                <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                                    <button onClick={onEdit} className="text-gray-400 hover:text-white transition-colors" title="Editar Atleta">
+                                        <EditIcon className="w-5 h-5" />
+                                    </button>
+                                    <button onClick={onRequestDelete} className="text-gray-400 hover:text-accent-red transition-colors" title="Excluir Atleta">
+                                        <TrashIcon className="w-5 h-5" />
+                                    </button>
+                                </div>
                             )}
                         </div>
                         <p className="text-gray-400">{calculateAge(athlete.dob)} anos ({formatDate(athlete.dob)})</p>
@@ -1269,6 +1368,7 @@ const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: 
                         <activeAssessmentDetails.ViewComponent 
                             assessments={athlete.assessments[activeTab]} 
                             onEdit={(data: AssessmentData) => setEditingAssessment({type: activeTab, data})}
+                            onDelete={(assessmentId: string) => handleRequestDeleteAssessment(activeTab, assessmentId)}
                             isReadOnly={userRole === 'student'}
                         />
                     )}
@@ -1524,12 +1624,13 @@ const LoginPage: FC<{ onLogin: (user: User) => void; athletes: Athlete[] }> = ({
 
 // --- MAIN APP ---
 const App: FC = () => {
-  const { athletes, loading, addAthlete, updateAthlete, addAssessment, updateAssessment } = useAthletes();
+  const { athletes, loading, addAthlete, updateAthlete, deleteAthlete, addAssessment, updateAssessment, deleteAssessment } = useAthletes();
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<'list' | 'profile' | 'form'>('list');
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [reportToExportPDF, setReportToExportPDF] = useState<AssessmentType | 'all' | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [confirmDeleteAthleteId, setConfirmDeleteAthleteId] = useState<string | null>(null);
   
   // Check for saved user session on initial load
   useEffect(() => {
@@ -1612,6 +1713,15 @@ const App: FC = () => {
           setCurrentView('list');
       }
   };
+  
+  const executeDeleteAthlete = () => {
+    if (confirmDeleteAthleteId) {
+        deleteAthlete(confirmDeleteAthleteId);
+        setConfirmDeleteAthleteId(null);
+        handleBackToList();
+    }
+  };
+
 
   const renderContent = () => {
     if (loading) return <div className="flex justify-center items-center h-screen"><p>Carregando dados...</p></div>;
@@ -1629,7 +1739,17 @@ const App: FC = () => {
     
     if (user.role === 'student') {
         if (selectedAthlete) {
-            return <AthleteProfile athlete={selectedAthlete} onBack={handleLogout} addAssessment={addAssessment} updateAssessment={updateAssessment} onExportPDF={setReportToExportPDF} userRole="student" onEdit={() => {}} />;
+            return <AthleteProfile 
+                athlete={selectedAthlete} 
+                onBack={handleLogout} 
+                addAssessment={addAssessment} 
+                updateAssessment={updateAssessment}
+                deleteAssessment={deleteAssessment}
+                onExportPDF={setReportToExportPDF} 
+                userRole="student" 
+                onEdit={() => {}}
+                onRequestDelete={() => {}} 
+            />;
         }
         return <div className="text-center"><p>Erro: Atleta não encontrado.</p><Button onClick={handleLogout}>Sair</Button></div>
     }
@@ -1637,9 +1757,24 @@ const App: FC = () => {
     // Admin View
     switch (currentView) {
       case 'profile':
-        return selectedAthlete && <AthleteProfile athlete={selectedAthlete} onBack={handleBackToList} addAssessment={addAssessment} updateAssessment={updateAssessment} onExportPDF={setReportToExportPDF} userRole="admin" onEdit={handleStartEditAthlete} />;
+        return selectedAthlete && <AthleteProfile 
+            athlete={selectedAthlete} 
+            onBack={handleBackToList} 
+            addAssessment={addAssessment} 
+            updateAssessment={updateAssessment}
+            deleteAssessment={deleteAssessment}
+            onExportPDF={setReportToExportPDF} 
+            userRole="admin" 
+            onEdit={handleStartEditAthlete}
+            onRequestDelete={() => setConfirmDeleteAthleteId(selectedAthlete.id)} 
+        />;
       case 'form':
-        return <AthleteForm onSave={handleSaveAthleteForm} onCancel={handleCancelAthleteForm} athlete={selectedAthlete ?? undefined}/>
+        return <AthleteForm 
+            onSave={handleSaveAthleteForm} 
+            onCancel={handleCancelAthleteForm} 
+            athlete={selectedAthlete ?? undefined}
+            onDelete={() => setConfirmDeleteAthleteId(selectedAthlete!.id)}
+        />
       case 'list':
       default:
         return <AthleteList athletes={filteredAthletes} onSelect={handleSelectAthlete} onAdd={handleShowAddForm} searchTerm={searchTerm} onSearchChange={setSearchTerm} />;
@@ -1650,6 +1785,13 @@ const App: FC = () => {
 
   return (
     <div className={`min-h-screen font-sans ${reportToExportPDF ? 'bg-white' : 'bg-gray-900 text-gray-200'}`}>
+        {confirmDeleteAthleteId && (
+            <ConfirmationModal 
+                message="Tem certeza que deseja excluir este atleta? Todos os dados e avaliações associados serão perdidos permanentemente."
+                onConfirm={executeDeleteAthlete}
+                onCancel={() => setConfirmDeleteAthleteId(null)}
+            />
+        )}
         {showHeaderFooter && (
             <header className="bg-gray-800/50 backdrop-blur-sm sticky top-0 z-10 shadow-lg no-print">
                 <div className="container mx-auto px-4 py-3 flex justify-between items-center">
