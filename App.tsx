@@ -271,12 +271,12 @@ const BioimpedanceForm: FC<{ onSave: (data: Omit<Bioimpedance, 'id'> | Bioimpeda
     const isEditing = !!initialData;
     const [formData, setFormData] = useState({
         date: initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0],
-        weight: initialData?.weight.toString() || '',
-        fatPercentage: initialData?.fatPercentage.toString() || '',
-        muscleMass: initialData?.muscleMass.toString() || '',
-        visceralFat: initialData?.visceralFat.toString() || '',
-        hydration: initialData?.hydration.toString() || '',
-        observations: initialData?.observations || ''
+        weight: String(initialData?.weight ?? ''),
+        fatPercentage: String(initialData?.fatPercentage ?? ''),
+        muscleMass: String(initialData?.muscleMass ?? ''),
+        visceralFat: String(initialData?.visceralFat ?? ''),
+        hydration: String(initialData?.hydration ?? ''),
+        observations: initialData?.observations ?? ''
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -326,11 +326,11 @@ const IsometricStrengthForm: FC<{ onSave: (data: Omit<IsometricStrength, 'id'> |
     const isEditing = !!initialData;
     const [formData, setFormData] = useState({
         date: initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0],
-        quadricepsR: initialData?.quadricepsR.toString() || '',
-        quadricepsL: initialData?.quadricepsL.toString() || '',
-        hamstringsR: initialData?.hamstringsR.toString() || '',
-        hamstringsL: initialData?.hamstringsL.toString() || '',
-        observations: initialData?.observations || ''
+        quadricepsR: String(initialData?.quadricepsR ?? ''),
+        quadricepsL: String(initialData?.quadricepsL ?? ''),
+        hamstringsR: String(initialData?.hamstringsR ?? ''),
+        hamstringsL: String(initialData?.hamstringsL ?? ''),
+        observations: initialData?.observations ?? ''
     });
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
     
@@ -375,13 +375,13 @@ const CMJForm: FC<{ onSave: (data: Omit<Cmj, 'id'> | Cmj) => void; onCancel: () 
     const isEditing = !!initialData;
     const [formData, setFormData] = useState({
         date: initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0],
-        height: initialData?.height.toString() || '',
-        power: initialData?.power.toString() || '',
-        depth: initialData?.depth.toString() || '',
-        unilateralJumpR: initialData?.unilateralJumpR?.toString() || '',
-        unilateralJumpL: initialData?.unilateralJumpL?.toString() || '',
-        load: initialData?.load?.toString() || '',
-        observations: initialData?.observations || ''
+        height: String(initialData?.height ?? ''),
+        power: String(initialData?.power ?? ''),
+        depth: String(initialData?.depth ?? ''),
+        unilateralJumpR: String(initialData?.unilateralJumpR ?? ''),
+        unilateralJumpL: String(initialData?.unilateralJumpL ?? ''),
+        load: String(initialData?.load ?? ''),
+        observations: initialData?.observations ?? ''
     });
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
     
@@ -434,8 +434,8 @@ const GeneralStrengthForm: FC<{ onSave: (data: Omit<GeneralStrength, 'id'> | Gen
     const [formData, setFormData] = useState({
         date: initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0],
         exercise: initialData?.exercise || GeneralStrengthExercise.HALF_SQUAT,
-        load: initialData?.load.toString() || '',
-        observations: initialData?.observations || ''
+        load: String(initialData?.load ?? ''),
+        observations: initialData?.observations ?? ''
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -484,9 +484,19 @@ const VO2MaxForm: FC<{ onSave: (data: Omit<Vo2max, 'id'> | Vo2max) => void; onCa
     const isEditing = !!initialData;
     const [formData, setFormData] = useState({
         date: initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0],
-        vo2max: initialData?.vo2max.toString() || '', maxHeartRate: initialData?.maxHeartRate.toString() || '', thresholdHeartRate: initialData?.thresholdHeartRate.toString() || '', maxVentilation: initialData?.maxVentilation.toString() || '',
-        thresholdVentilation: initialData?.thresholdVentilation.toString() || '', maxLoad: initialData?.maxLoad.toString() || '', thresholdLoad: initialData?.thresholdLoad.toString() || '', vam: initialData?.vam.toString() || '',
-        rec10s: initialData?.rec10s.toString() || '', rec30s: initialData?.rec30s.toString() || '', rec60s: initialData?.rec60s.toString() || '', score: initialData?.score.toString() || '', observations: initialData?.observations || ''
+        vo2max: String(initialData?.vo2max ?? ''),
+        maxHeartRate: String(initialData?.maxHeartRate ?? ''),
+        thresholdHeartRate: String(initialData?.thresholdHeartRate ?? ''),
+        maxVentilation: String(initialData?.maxVentilation ?? ''),
+        thresholdVentilation: String(initialData?.thresholdVentilation ?? ''),
+        maxLoad: String(initialData?.maxLoad ?? ''),
+        thresholdLoad: String(initialData?.thresholdLoad ?? ''),
+        vam: String(initialData?.vam ?? ''),
+        rec10s: String(initialData?.rec10s ?? ''),
+        rec30s: String(initialData?.rec30s ?? ''),
+        rec60s: String(initialData?.rec60s ?? ''),
+        score: String(initialData?.score ?? ''),
+        observations: initialData?.observations ?? ''
     });
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -910,6 +920,24 @@ const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boo
                 <div className="mt-6">
                     <h4 className="font-semibold text-brand-light mb-2">Observações da Última Avaliação</h4>
                     <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
+                </div>
+            )}
+            {!isPrinting && assessments.length > 0 && (
+                <div className="mt-6">
+                    <h4 className="font-semibold text-brand-light mb-2">Histórico de Avaliações</h4>
+                    <div className="space-y-2">
+                        {assessments.map(asm => (
+                            <div key={asm.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded-md text-sm">
+                                <span>{formatDate(asm.date)} - {asm.exercise}: <strong>{asm.load} kg</strong></span>
+                                {!isReadOnly && (
+                                    <div className="flex items-center gap-3">
+                                        <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
+                                        <button onClick={() => onDelete(asm.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
