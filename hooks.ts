@@ -1,5 +1,4 @@
 
-
 import { useState, useEffect } from 'react';
 // FIX: Import GeneralStrengthExercise to use enum members directly and ensure type safety.
 import { Athlete, AssessmentData, AssessmentType, GeneralStrengthExercise } from './types';
@@ -54,107 +53,89 @@ const MOCK_ATHLETES: Athlete[] = [
     }
   ];
 
-// --- BACKEND API ---
-// This section communicates with a backend API, using a "load all/save all" pattern
-// with the endpoints '/api/ler' and '/api/salvar' as requested.
-const api = {
-    async loadAthletes(): Promise<Athlete[]> {
-        try {
-            const response = await fetch('/api/ler'); // Endpoint from user prompt
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.length > 0) return data;
-            }
-            console.warn('API call to /api/ler failed or returned no data. Falling back to mock data.');
-            return JSON.parse(JSON.stringify(MOCK_ATHLETES));
-        } catch (error) {
-            console.error('Network error fetching from /api/ler, falling back to mock data.', error);
-            return JSON.parse(JSON.stringify(MOCK_ATHLETES));
-        }
-    },
-
-    async saveAthletes(athletes: Athlete[]): Promise<void> {
-        try {
-            const response = await fetch('/api/salvar', { // Endpoint from user prompt
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(athletes),
-            });
-            if (!response.ok) {
-                const errorBody = await response.text();
-                throw new Error(`Server error: ${response.status} ${errorBody}`);
-            }
-        } catch (error) {
-            console.error(`API call to /api/salvar failed: ${error}.`);
-            throw error;
-        }
-    }
-};
-
 export const useAthletes = () => {
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    api.loadAthletes().then(data => {
-      setAthletes(data);
-    }).catch(err => {
-        console.error(err);
-        toast.error("Falha ao carregar os dados dos atletas.");
-    }).finally(() => {
-      setLoading(false);
-    });
+    // Carregar atletas do servidor; fallback para MOCK_ATHLETES
+    fetch('/api/athletes')
+      .then(res => res.json())
+      .then(res => {
+        if (res && Array.isArray(res.athletes)) {
+          // map assessments back to the shape used in the app if needed
+          const mapped = res.athletes.map((a:any) => ({
+            ...a,
+            assessments: a.assessments || { bioimpedance: [], isometricStrength: [], generalStrength: [], cmj: [], vo2max: [] }
+          }));
+          setAthletes(mapped);
+        } else {
+          setAthletes(MOCK_ATHLETES);
+        }
+      })
+      .catch(error => {
+        console.error('Falha ao carregar atletas do servidor', error);
+        setAthletes(MOCK_ATHLETES);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const performOptimisticUpdate = async (updatedAthletes: Athlete[], successMessage: string, errorMessage: string) => {
-    const originalAthletes = athletes;
-    setAthletes(updatedAthletes);
-    try {
-        await api.saveAthletes(updatedAthletes);
-        toast.success(successMessage);
-    } catch (error) {
-        toast.error(errorMessage);
-        // Revert state on failure to keep UI in sync with the backend
-        setAthletes(originalAthletes);
+  // Debounced save to reduce number of requests when changing state rapidly
+  const saveTimeoutRef = { current: null as number | null };
+  const saveAthletesToServer = () => {
+    const key = (import.meta as any).env.VITE_API_KEY;
+    fetch('/api/athletes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+      body: JSON.stringify({ athletes }),
+    }).then(res => {
+      if (!res.ok) throw new Error('Falha ao salvar no servidor');
+    }).catch(error => {
+      console.error('Failed to save athletes to server', error);
+      toast.error('Erro ao salvar os dados no servidor.');
+    });
+  };
+
+  useEffect(() => {
+    if (!loading) {
+      if (saveTimeoutRef.current) window.clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = window.setTimeout(() => {
+        saveAthletesToServer();
+        saveTimeoutRef.current = null;
+      }, 1000);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [athletes, loading]);
 
-  const addAthlete = async (athleteData: Omit<Athlete, 'id' | 'assessments'>) => {
+  const addAthlete = (athlete: Omit<Athlete, 'id' | 'assessments'>) => {
     const newAthlete: Athlete = {
-        ...athleteData,
-        id: `athlete-${Date.now()}`,
-        assessments: { bioimpedance: [], isometricStrength: [], generalStrength: [], cmj: [], vo2max: [] },
+      ...athlete,
+      id: new Date().toISOString(),
+      assessments: {
+        bioimpedance: [],
+        isometricStrength: [],
+        generalStrength: [],
+        cmj: [],
+        vo2max: [],
+      },
     };
-    const newAthletes = [...athletes, newAthlete];
-    await performOptimisticUpdate(
-        newAthletes,
-        `${athleteData.name} adicionado(a) com sucesso!`,
-        "Falha ao salvar atleta. Revertendo alterações."
-    );
+    setAthletes(prev => [...prev, newAthlete]);
+    toast.success(`${athlete.name} adicionado(a) com sucesso!`);
   };
 
-  const updateAthlete = async (updatedAthlete: Athlete) => {
-    const newAthletes = athletes.map(a => a.id === updatedAthlete.id ? updatedAthlete : a);
-    await performOptimisticUpdate(
-        newAthletes,
-        `${updatedAthlete.name} atualizado(a) com sucesso!`,
-        "Falha ao atualizar atleta. Revertendo alterações."
-    );
+  const updateAthlete = (updatedAthlete: Athlete) => {
+    setAthletes(prev => prev.map(a => a.id === updatedAthlete.id ? updatedAthlete : a));
+    toast.success(`${updatedAthlete.name} atualizado(a) com sucesso!`);
   };
   
-  const deleteAthlete = async (athleteId: string) => {
-    const newAthletes = athletes.filter(a => a.id !== athleteId);
-    await performOptimisticUpdate(
-        newAthletes,
-        "Atleta excluído com sucesso.",
-        "Falha ao excluir atleta. Revertendo alterações."
-    );
-  };
+  const addAssessment = (athleteId: string, type: AssessmentType, data: Omit<AssessmentData, 'id'>) => {
+    const newAssessment = {
+      ...data,
+      id: new Date().toISOString(),
+      date: data.date, // Explicitly use the date from the form data
+    } as AssessmentData;
 
-  const addAssessment = async (athleteId: string, type: AssessmentType, data: Omit<AssessmentData, 'id'>) => {
-    const newAssessment = { ...data, id: `assessment-${Date.now()}` } as AssessmentData;
-    const newAthletes = athletes.map(athlete => {
+    setAthletes(prev => prev.map(athlete => {
       if (athlete.id === athleteId) {
         const updatedAssessments = {
           ...athlete.assessments,
@@ -163,59 +144,10 @@ export const useAthletes = () => {
         return { ...athlete, assessments: updatedAssessments };
       }
       return athlete;
-    });
-    await performOptimisticUpdate(
-        newAthletes,
-        `Nova avaliação de ${type} adicionada.`,
-        `Falha ao adicionar avaliação de ${type}. Revertendo.`
-    );
-  };
-
-  const updateAssessment = async (athleteId: string, type: AssessmentType, updatedData: AssessmentData) => {
-    const newAthletes = athletes.map(athlete => {
-        if (athlete.id === athleteId) {
-            const updatedAssessmentsList = athlete.assessments[type]
-                .map(asm => asm.id === updatedData.id ? updatedData : asm)
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-            return {
-                ...athlete,
-                assessments: {
-                    ...athlete.assessments,
-                    [type]: updatedAssessmentsList
-                }
-            };
-        }
-        return athlete;
-    });
-    await performOptimisticUpdate(
-        newAthletes,
-        `Avaliação de ${type} atualizada.`,
-        `Falha ao atualizar avaliação de ${type}. Revertendo.`
-    );
-  };
-
-  const deleteAssessment = async (athleteId: string, type: AssessmentType, assessmentId: string) => {
-    const newAthletes = athletes.map(athlete => {
-        if (athlete.id === athleteId) {
-            const updatedAssessmentsList = athlete.assessments[type].filter(asm => asm.id !== assessmentId);
-            return {
-                ...athlete,
-                assessments: {
-                    ...athlete.assessments,
-                    [type]: updatedAssessmentsList
-                }
-            };
-        }
-        return athlete;
-    });
-    await performOptimisticUpdate(
-        newAthletes,
-        `Avaliação de ${type} excluída com sucesso.`,
-        `Falha ao excluir avaliação de ${type}. Revertendo.`
-    );
+    }));
+    toast.success(`Nova avaliação de ${type} adicionada.`);
   };
 
 
-  return { athletes, loading, addAthlete, updateAthlete, deleteAthlete, addAssessment, updateAssessment, deleteAssessment };
+  return { athletes, loading, addAthlete, updateAthlete, addAssessment };
 };
