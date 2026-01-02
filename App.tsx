@@ -4,7 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area, ReferenceArea
 } from 'recharts';
 import { useAthletes } from './hooks';
-import { Athlete, Bioimpedance, Cmj, GeneralStrengthExercise, IsometricStrength, Vo2max, AssessmentType, GeneralStrength, AssessmentData } from './types';
+import { Athlete, Bioimpedance, Cmj, GeneralStrengthExercise, IsometricStrength, Vo2max, AssessmentType, GeneralStrength } from './types';
 import { calculateAge, calculateIQRatios, calculateVo2maxZones, formatDate } from './utils';
 import toast from 'react-hot-toast';
 
@@ -66,16 +66,6 @@ const LungsIcon: FC<{className?: string}> = ({className}) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M10 6V4c0-1.1.9-2 2-2s2 .9 2 2v2m-4 11v3m4-3v3" />
     </svg>
 );
-const EditIcon: FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-    </svg>
-);
-const TrashIcon: FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.067-2.09 1.02-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-    </svg>
-);
 
 
 // --- LOGO ---
@@ -103,28 +93,13 @@ const Card: FC<{ children: React.ReactNode; className?: string; onClick?: () => 
 );
 
 
-const Button: FC<{ onClick?: () => void; children: React.ReactNode; className?: string, variant?: 'primary' | 'secondary' | 'danger', type?: 'button' | 'submit' }> = ({ onClick, children, className, variant = 'primary', type = 'button' }) => {
+const Button: FC<{ onClick?: () => void; children: React.ReactNode; className?: string, variant?: 'primary' | 'secondary', type?: 'button' | 'submit' }> = ({ onClick, children, className, variant = 'primary', type = 'button' }) => {
     const baseClasses = "px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 no-print";
-    const variantClasses = {
-        primary: "bg-brand-primary hover:bg-brand-dark text-white shadow-md hover:shadow-lg",
-        secondary: "bg-gray-600 hover:bg-gray-500 text-gray-100",
-        danger: "bg-accent-red hover:bg-red-700 text-white"
-    };
-    return <button onClick={onClick} type={type} className={`${baseClasses} ${variantClasses[variant]} ${className}`}>{children}</button>;
+    const variantClasses = variant === 'primary' 
+        ? "bg-brand-primary hover:bg-brand-dark text-white shadow-md hover:shadow-lg" 
+        : "bg-gray-600 hover:bg-gray-500 text-gray-100";
+    return <button onClick={onClick} type={type} className={`${baseClasses} ${variantClasses} ${className}`}>{children}</button>;
 };
-
-const ConfirmationModal: FC<{ message: string; onConfirm: () => void; onCancel: () => void; }> = ({ message, onConfirm, onCancel }) => (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-        <Card className="max-w-sm">
-            <h3 className="text-lg font-semibold text-white mb-4">Confirmar Ação</h3>
-            <p className="text-gray-300 mb-6">{message}</p>
-            <div className="flex justify-end gap-4">
-                <Button onClick={onCancel} variant="secondary">Cancelar</Button>
-                <Button onClick={onConfirm} variant="danger">Confirmar</Button>
-            </div>
-        </Card>
-    </div>
-);
 
 // --- ANATOMY SVG ---
 const Anatomy: FC<{ highlightedMuscles: ('quadricepsR' | 'quadricepsL' | 'hamstringsR' | 'hamstringsL')[] }> = ({ highlightedMuscles }) => {
@@ -256,29 +231,19 @@ const Select: FC<React.SelectHTMLAttributes<HTMLSelectElement>> = (props) => (
     <select {...props} className={`bg-gray-800 p-2 rounded w-full ${props.className}`} />
 );
 
-const AddAssessmentModal: FC<{ title: string; children: React.ReactNode; onCancel: () => void; onSubmit: (e: React.FormEvent) => void, isEditing?: boolean }> = ({ title, children, onCancel, onSubmit, isEditing }) => (
+const AddAssessmentModal: FC<{ title: string; children: React.ReactNode; onCancel: () => void; onSubmit: (e: React.FormEvent) => void }> = ({ title, children, onCancel, onSubmit }) => (
     <form onSubmit={onSubmit} className="space-y-4 p-4 bg-gray-700 rounded-lg">
         <h4 className="text-lg font-semibold text-white">{title}</h4>
         {children}
         <div className="flex justify-end gap-2">
             <Button onClick={onCancel} variant="secondary" type="button">Cancelar</Button>
-            <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Salvar'}</Button>
+            <Button type="submit">Salvar</Button>
         </div>
     </form>
 );
 
-const BioimpedanceForm: FC<{ onSave: (data: Omit<Bioimpedance, 'id'> | Bioimpedance) => void; onCancel: () => void; initialData?: Bioimpedance }> = ({ onSave, onCancel, initialData }) => {
-    const isEditing = !!initialData;
-    const [formData, setFormData] = useState({
-        date: initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0],
-        weight: String(initialData?.weight ?? ''),
-        fatPercentage: String(initialData?.fatPercentage ?? ''),
-        muscleMass: String(initialData?.muscleMass ?? ''),
-        visceralFat: String(initialData?.visceralFat ?? ''),
-        hydration: String(initialData?.hydration ?? ''),
-        observations: initialData?.observations ?? ''
-    });
-
+const BioimpedanceForm: FC<{ onAdd: (data: Omit<Bioimpedance, 'id'>) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
+    const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], weight: '', fatPercentage: '', muscleMass: '', visceralFat: '', hydration: '', observations: '' });
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
     
     const handleSubmit = (e: React.FormEvent) => {
@@ -294,16 +259,11 @@ const BioimpedanceForm: FC<{ onSave: (data: Omit<Bioimpedance, 'id'> | Bioimpeda
             toast.error("Por favor, preencha todos os campos com valores válidos, incluindo a data.");
             return;
         }
-        
-        if (isEditing) {
-            onSave({ ...initialData, date: formData.date, ...numericData, observations: formData.observations });
-        } else {
-            onSave({ date: formData.date, ...numericData, observations: formData.observations });
-        }
+        onAdd({date: formData.date, ...numericData, observations: formData.observations });
     };
 
     return (
-        <AddAssessmentModal title={isEditing ? "Editar Avaliação de Bioimpedância" : "Nova Avaliação de Bioimpedância"} onCancel={onCancel} onSubmit={handleSubmit} isEditing={isEditing}>
+        <AddAssessmentModal title="Nova Avaliação de Bioimpedância" onCancel={onCancel} onSubmit={handleSubmit}>
              <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">Data da Avaliação</label>
@@ -322,16 +282,8 @@ const BioimpedanceForm: FC<{ onSave: (data: Omit<Bioimpedance, 'id'> | Bioimpeda
     );
 };
 
-const IsometricStrengthForm: FC<{ onSave: (data: Omit<IsometricStrength, 'id'> | IsometricStrength) => void; onCancel: () => void; initialData?: IsometricStrength }> = ({ onSave, onCancel, initialData }) => {
-    const isEditing = !!initialData;
-    const [formData, setFormData] = useState({
-        date: initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0],
-        quadricepsR: String(initialData?.quadricepsR ?? ''),
-        quadricepsL: String(initialData?.quadricepsL ?? ''),
-        hamstringsR: String(initialData?.hamstringsR ?? ''),
-        hamstringsL: String(initialData?.hamstringsL ?? ''),
-        observations: initialData?.observations ?? ''
-    });
+const IsometricStrengthForm: FC<{ onAdd: (data: Omit<IsometricStrength, 'id'>) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
+    const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], quadricepsR: '', quadricepsL: '', hamstringsR: '', hamstringsL: '', observations: '' });
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
     
     const handleSubmit = (e: React.FormEvent) => {
@@ -346,14 +298,10 @@ const IsometricStrengthForm: FC<{ onSave: (data: Omit<IsometricStrength, 'id'> |
             toast.error("Por favor, preencha todos os campos com valores válidos, incluindo a data.");
             return;
         }
-        if (isEditing) {
-            onSave({ ...initialData, date: formData.date, ...numericData, observations: formData.observations });
-        } else {
-            onSave({ date: formData.date, ...numericData, observations: formData.observations });
-        }
+        onAdd({ date: formData.date, ...numericData, observations: formData.observations });
     };
     return (
-        <AddAssessmentModal title={isEditing ? "Editar Avaliação de Força Isométrica" : "Nova Avaliação de Força Isométrica"} onCancel={onCancel} onSubmit={handleSubmit} isEditing={isEditing}>
+        <AddAssessmentModal title="Nova Avaliação de Força Isométrica" onCancel={onCancel} onSubmit={handleSubmit}>
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">Data da Avaliação</label>
@@ -371,18 +319,8 @@ const IsometricStrengthForm: FC<{ onSave: (data: Omit<IsometricStrength, 'id'> |
     );
 };
 
-const CMJForm: FC<{ onSave: (data: Omit<Cmj, 'id'> | Cmj) => void; onCancel: () => void; initialData?: Cmj }> = ({ onSave, onCancel, initialData }) => {
-    const isEditing = !!initialData;
-    const [formData, setFormData] = useState({
-        date: initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0],
-        height: String(initialData?.height ?? ''),
-        power: String(initialData?.power ?? ''),
-        depth: String(initialData?.depth ?? ''),
-        unilateralJumpR: String(initialData?.unilateralJumpR ?? ''),
-        unilateralJumpL: String(initialData?.unilateralJumpL ?? ''),
-        load: String(initialData?.load ?? ''),
-        observations: initialData?.observations ?? ''
-    });
+const CMJForm: FC<{ onAdd: (data: Omit<Cmj, 'id'>) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
+    const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], height: '', power: '', depth: '', unilateralJumpR: '', unilateralJumpL: '', load: '', observations: '' });
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
     
     const handleSubmit = (e: React.FormEvent) => {
@@ -400,16 +338,11 @@ const CMJForm: FC<{ onSave: (data: Omit<Cmj, 'id'> | Cmj) => void; onCancel: () 
             toast.error("Por favor, preencha os campos obrigatórios (Data, Altura, Potência, Profundidade).");
             return;
         }
-
-        if (isEditing) {
-            onSave({ ...initialData, date, ...numericData, observations } as Cmj);
-        } else {
-            onSave({ date, ...numericData, observations } as Omit<Cmj, 'id'>);
-        }
+        onAdd({ date, ...numericData, observations } as Omit<Cmj, 'id'>);
     };
 
     return (
-        <AddAssessmentModal title={isEditing ? "Editar Avaliação de CMJ" : "Nova Avaliação de CMJ"} onCancel={onCancel} onSubmit={handleSubmit} isEditing={isEditing}>
+        <AddAssessmentModal title="Nova Avaliação de CMJ" onCancel={onCancel} onSubmit={handleSubmit}>
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">Data da Avaliação</label>
@@ -429,15 +362,8 @@ const CMJForm: FC<{ onSave: (data: Omit<Cmj, 'id'> | Cmj) => void; onCancel: () 
     );
 };
 
-const GeneralStrengthForm: FC<{ onSave: (data: Omit<GeneralStrength, 'id'> | GeneralStrength) => void; onCancel: () => void; initialData?: GeneralStrength }> = ({ onSave, onCancel, initialData }) => {
-    const isEditing = !!initialData;
-    const [formData, setFormData] = useState({
-        date: initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0],
-        exercise: initialData?.exercise || GeneralStrengthExercise.HALF_SQUAT,
-        load: String(initialData?.load ?? ''),
-        observations: initialData?.observations ?? ''
-    });
-
+const GeneralStrengthForm: FC<{ onAdd: (data: Omit<GeneralStrength, 'id'>) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
+    const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], exercise: GeneralStrengthExercise.HALF_SQUAT, load: '', observations: '' });
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
@@ -454,15 +380,11 @@ const GeneralStrengthForm: FC<{ onSave: (data: Omit<GeneralStrength, 'id'> | Gen
             toast.error("Por favor, insira uma data e carga válidas.");
             return;
         }
-        if (isEditing) {
-            onSave({ ...initialData, ...data });
-        } else {
-            onSave(data);
-        }
+        onAdd(data);
     };
 
     return (
-        <AddAssessmentModal title={isEditing ? "Editar Avaliação de Força Geral" : "Nova Avaliação de Força Geral"} onCancel={onCancel} onSubmit={handleSubmit} isEditing={isEditing}>
+        <AddAssessmentModal title="Nova Avaliação de Força Geral" onCancel={onCancel} onSubmit={handleSubmit}>
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">Data da Avaliação</label>
@@ -480,23 +402,12 @@ const GeneralStrengthForm: FC<{ onSave: (data: Omit<GeneralStrength, 'id'> | Gen
     );
 };
 
-const VO2MaxForm: FC<{ onSave: (data: Omit<Vo2max, 'id'> | Vo2max) => void; onCancel: () => void; initialData?: Vo2max }> = ({ onSave, onCancel, initialData }) => {
-    const isEditing = !!initialData;
+const VO2MaxForm: FC<{ onAdd: (data: Omit<Vo2max, 'id'>) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
     const [formData, setFormData] = useState({
-        date: initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0],
-        vo2max: String(initialData?.vo2max ?? ''),
-        maxHeartRate: String(initialData?.maxHeartRate ?? ''),
-        thresholdHeartRate: String(initialData?.thresholdHeartRate ?? ''),
-        maxVentilation: String(initialData?.maxVentilation ?? ''),
-        thresholdVentilation: String(initialData?.thresholdVentilation ?? ''),
-        maxLoad: String(initialData?.maxLoad ?? ''),
-        thresholdLoad: String(initialData?.thresholdLoad ?? ''),
-        vam: String(initialData?.vam ?? ''),
-        rec10s: String(initialData?.rec10s ?? ''),
-        rec30s: String(initialData?.rec30s ?? ''),
-        rec60s: String(initialData?.rec60s ?? ''),
-        score: String(initialData?.score ?? ''),
-        observations: initialData?.observations ?? ''
+        date: new Date().toISOString().split('T')[0],
+        vo2max: '', maxHeartRate: '', thresholdHeartRate: '', maxVentilation: '',
+        thresholdVentilation: '', maxLoad: '', thresholdLoad: '', vam: '',
+        rec10s: '', rec30s: '', rec60s: '', score: '', observations: ''
     });
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -510,15 +421,11 @@ const VO2MaxForm: FC<{ onSave: (data: Omit<Vo2max, 'id'> | Vo2max) => void; onCa
             toast.error("Por favor, preencha todos os campos com valores válidos, incluindo a data.");
             return;
         }
-        if (isEditing) {
-            onSave({ ...initialData, date, ...numericData, observations } as Vo2max);
-        } else {
-            onSave({ date, ...numericData, observations } as Omit<Vo2max, 'id'>);
-        }
+        onAdd({ date, ...numericData, observations } as Omit<Vo2max, 'id'>);
     };
 
     return (
-        <AddAssessmentModal title={isEditing ? "Editar Avaliação de VO₂ máx" : "Nova Avaliação de VO₂ máx"} onCancel={onCancel} onSubmit={handleSubmit} isEditing={isEditing}>
+        <AddAssessmentModal title="Nova Avaliação de VO₂ máx" onCancel={onCancel} onSubmit={handleSubmit}>
              <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">Data da Avaliação</label>
@@ -545,7 +452,7 @@ const VO2MaxForm: FC<{ onSave: (data: Omit<Vo2max, 'id'> | Vo2max) => void; onCa
 };
 
 // --- VIEW Components ---
-const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, onEdit: (assessment: Bioimpedance) => void, onDelete: (assessmentId: string) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, onDelete, isReadOnly }) => {
+const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean }> = ({ assessments, isPrinting }) => {
     const latest = assessments[0];
 
     const evolutionData = useMemo(() => {
@@ -566,15 +473,7 @@ const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, 
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-end items-center gap-2 text-sm text-gray-400">
-                Última avaliação: {formatDate(latest.date)}
-                {!isReadOnly && !isPrinting && (
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
-                        <button onClick={() => onDelete(latest.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
-                    </div>
-                )}
-            </div>
+            <div className="text-right text-sm text-gray-400">Última avaliação: {formatDate(latest.date)}</div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
                 <div className="bg-gray-700/50 p-3 rounded-lg">
@@ -605,7 +504,7 @@ const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, 
 
             <div>
                 <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Composição Corporal (kg)</h4>
-                <ResponsiveContainer width="100%" aspect={2.5}>
+                <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
@@ -626,9 +525,9 @@ const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, 
                         <YAxis stroke="#9CA3AF" label={{ value: 'Massa (kg)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }} />
                         <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
                         <Legend />
-                        <Area type="monotone" dataKey="weight" name="Peso Total" stroke="#8884d8" fillOpacity={1} fill="url(#colorWeight)" strokeWidth={2} />
-                        <Area type="monotone" dataKey="muscleMass" name="Massa Muscular" stroke="#82ca9d" fillOpacity={1} fill="url(#colorMuscle)" strokeWidth={2} />
-                        <Area type="monotone" dataKey="fatMass" name="Massa Gorda" stroke="#ffc658" fillOpacity={1} fill="url(#colorFat)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="weight" name="Peso Total" stroke="#8884d8" fillOpacity={1} fill="url(#colorWeight)" />
+                        <Area type="monotone" dataKey="muscleMass" name="Massa Muscular" stroke="#82ca9d" fillOpacity={1} fill="url(#colorMuscle)" />
+                        <Area type="monotone" dataKey="fatMass" name="Massa Gorda" stroke="#ffc658" fillOpacity={1} fill="url(#colorFat)" />
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
@@ -639,30 +538,11 @@ const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean, 
                     <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
                 </div>
             )}
-
-            {!isPrinting && assessments.length > 1 && (
-                <div className="mt-6">
-                    <h4 className="font-semibold text-brand-light mb-2">Histórico de Avaliações</h4>
-                    <div className="space-y-2">
-                        {assessments.slice(1).map(asm => (
-                            <div key={asm.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded-md text-sm">
-                                <span>{formatDate(asm.date)} - Peso: {asm.weight.toFixed(1)}kg, %G: {asm.fatPercentage.toFixed(1)}%</span>
-                                {!isReadOnly && (
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
-                                        <button onClick={() => onDelete(asm.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
 
-const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?: boolean, onEdit: (assessment: IsometricStrength) => void, onDelete: (assessmentId: string) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, onDelete, isReadOnly }) => {
+const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?: boolean }> = ({ assessments, isPrinting }) => {
     const latest = assessments[0];
     const [highlightedMuscles, setHighlightedMuscles] = useState<('quadricepsR' | 'quadricepsL' | 'hamstringsR' | 'hamstringsL')[]>([]);
 
@@ -721,15 +601,7 @@ const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?:
 
     return (
          <div className="space-y-8">
-             <div className="flex justify-end items-center gap-2 text-sm text-gray-400">
-                Última avaliação: {formatDate(latest.date)}
-                {!isReadOnly && !isPrinting && (
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
-                        <button onClick={() => onDelete(latest.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
-                    </div>
-                )}
-            </div>
+             <div className="text-right text-sm text-gray-400">Última avaliação: {formatDate(latest.date)}</div>
              <div className="grid md:grid-cols-2 gap-6 items-center">
                 <div className="space-y-4">
                     <div 
@@ -780,21 +652,21 @@ const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?:
                 <>
                     <div>
                         <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Força (Média D/E)</h4>
-                        <ResponsiveContainer width="100%" aspect={3}>
+                        <ResponsiveContainer width="100%" height={250}>
                             <LineChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
                                 <XAxis dataKey="date" stroke="#9CA3AF"/>
                                 <YAxis stroke="#9CA3AF" label={{ value: 'Força (kgf)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }} />
                                 <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
                                 <Legend />
-                                <Line type="monotone" dataKey="quadriceps" name="Quadríceps" stroke="#8884d8" strokeWidth={2} />
-                                <Line type="monotone" dataKey="hamstrings" name="Isquiotibiais" stroke="#82ca9d" strokeWidth={2} />
+                                <Line type="monotone" dataKey="quadriceps" name="Quadríceps" stroke="#8884d8" />
+                                <Line type="monotone" dataKey="hamstrings" name="Isquiotibiais" stroke="#82ca9d" />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                     <div>
                         <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Razão I/Q (%)</h4>
-                        <ResponsiveContainer width="100%" aspect={3}>
+                        <ResponsiveContainer width="100%" height={250}>
                              <LineChart data={iqEvolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
                                 <XAxis dataKey="date" stroke="#9CA3AF"/>
@@ -802,8 +674,8 @@ const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?:
                                 <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
                                 <Legend />
                                 <ReferenceArea y1={50} y2={60} fill="#38A169" fillOpacity={0.2} label={{ value: 'Ideal', position: 'insideTopLeft', fill: '#A0AEC0' }}/>
-                                <Line type="monotone" dataKey="right" name="Perna Direita" stroke="#ffc658" strokeWidth={2} />
-                                <Line type="monotone" dataKey="left" name="Perna Esquerda" stroke="#E53E3E" strokeWidth={2} />
+                                <Line type="monotone" dataKey="right" name="Perna Direita" stroke="#ffc658" />
+                                <Line type="monotone" dataKey="left" name="Perna Esquerda" stroke="#E53E3E" />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -816,34 +688,17 @@ const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?:
                     <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
                 </div>
             )}
-            {!isPrinting && assessments.length > 1 && (
-                <div className="mt-6">
-                    <h4 className="font-semibold text-brand-light mb-2">Histórico de Avaliações</h4>
-                    <div className="space-y-2">
-                        {assessments.slice(1).map(asm => (
-                            <div key={asm.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded-md text-sm">
-                                <span>{formatDate(asm.date)} - Q: {asm.quadricepsR.toFixed(1)}/{asm.quadricepsL.toFixed(1)}, I: {asm.hamstringsR.toFixed(1)}/{asm.hamstringsL.toFixed(1)}</span>
-                                {!isReadOnly && (
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
-                                        <button onClick={() => onDelete(asm.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
          </div>
     );
 };
 
-const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boolean, onEdit: (assessment: GeneralStrength) => void, onDelete: (assessmentId: string) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, onDelete, isReadOnly }) => {
+const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boolean }> = ({ assessments, isPrinting }) => {
     const latest = assessments[0];
     const { latestByExercise, evolutionData } = useMemo(() => {
         if (assessments.length === 0) return { latestByExercise: [], evolutionData: [] };
 
-        const grouped = assessments.reduce((acc: Record<GeneralStrengthExercise, GeneralStrength[]>, a) => {
+        // FIX: Explicitly type the accumulator in the reduce function to prevent potential type inference issues.
+        const grouped = assessments.reduce((acc: Record<string, GeneralStrength[]>, a) => {
             if (!acc[a.exercise]) {
                 acc[a.exercise] = [];
             }
@@ -851,12 +706,11 @@ const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boo
             return acc;
         }, {} as Record<GeneralStrengthExercise, GeneralStrength[]>);
 
-        // FIX: Iterate over enum values directly using Object.values for better type safety and simplicity.
         const latestByExercise = Object.values(GeneralStrengthExercise).map(ex => {
             return grouped[ex]?.[0];
         }).filter(Boolean) as GeneralStrength[];
 
-        // FIX: Changed unknown to string for sort callback parameters to fix type error.
+        // FIX: Explicitly typed the sort callback parameters 'a' and 'b' as strings to fix type inference issue.
         const dates = Array.from(new Set(assessments.map(a => a.date))).sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
         const evolutionData = dates.map(date => {
             const entry: { [key: string]: any } = { date: formatDate(date) };
@@ -887,31 +741,22 @@ const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boo
                         <div key={a.id} className="bg-gray-700/50 p-3 rounded-lg">
                             <p className="text-sm text-brand-light">{a.exercise}</p>
                             <p className="text-2xl font-bold text-white">{a.load} <span className="text-base font-normal">kg</span></p>
-                            <div className="flex justify-center items-center gap-2 text-xs text-gray-500">
-                                {formatDate(a.date)}
-                                {!isReadOnly && !isPrinting && (
-                                     <div className="flex items-center gap-2">
-                                        <button onClick={() => onEdit(a)} className="text-gray-400 hover:text-white"><EditIcon className="w-3 h-3" /></button>
-                                        <button onClick={() => onDelete(a.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-3 h-3" /></button>
-                                     </div>
-                                )}
-                            </div>
+                            <p className="text-xs text-gray-500">{formatDate(a.date)}</p>
                         </div>
                     )) : <p className="text-gray-500 col-span-3">Nenhum dado recente.</p>}
                 </div>
             </div>
              <div>
                 <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Força (kg)</h4>
-                <ResponsiveContainer width="100%" aspect={2.5}>
+                <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
                         <XAxis dataKey="date" stroke="#9CA3AF"/>
                         <YAxis stroke="#9CA3AF" label={{ value: 'Carga (kg)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }} />
                         <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
                         <Legend />
-                        {/* FIX: Iterate over enum values directly for better type safety. */}
                         {Object.values(GeneralStrengthExercise).map(ex => (
-                            <Line key={ex} type="monotone" dataKey={ex} stroke={colors[ex]} connectNulls strokeWidth={2} />
+                             <Line key={ex} type="monotone" dataKey={ex} stroke={colors[ex]} connectNulls />
                         ))}
                     </LineChart>
                 </ResponsiveContainer>
@@ -922,29 +767,11 @@ const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boo
                     <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
                 </div>
             )}
-            {!isPrinting && assessments.length > 0 && (
-                <div className="mt-6">
-                    <h4 className="font-semibold text-brand-light mb-2">Histórico de Avaliações</h4>
-                    <div className="space-y-2">
-                        {assessments.map(asm => (
-                            <div key={asm.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded-md text-sm">
-                                <span>{formatDate(asm.date)} - {asm.exercise}: <strong>{asm.load} kg</strong></span>
-                                {!isReadOnly && (
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
-                                        <button onClick={() => onDelete(asm.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
 
-const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessment: Cmj) => void, onDelete: (assessmentId: string) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, onDelete, isReadOnly }) => {
+const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean }> = ({ assessments, isPrinting }) => {
     const latest = assessments[0];
     if (!latest) return <NoData />;
 
@@ -968,15 +795,7 @@ const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessmen
 
     return (
          <div className="space-y-4">
-            <div className="flex justify-end items-center gap-2 text-sm text-gray-400">
-                Última avaliação: {formatDate(latest.date)}
-                 {!isReadOnly && !isPrinting && (
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
-                        <button onClick={() => onDelete(latest.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
-                    </div>
-                )}
-            </div>
+            <div className="text-right text-sm text-gray-400">Última avaliação: {formatDate(latest.date)}</div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div className="bg-gray-700/50 p-3 rounded">
                     <p className="text-sm text-brand-light">Altura do Salto</p>
@@ -1026,7 +845,7 @@ const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessmen
             {assessments.length > 1 && (
                 <div className="mt-8">
                     <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução do Salto</h4>
-                    <ResponsiveContainer width="100%" aspect={2.5}>
+                    <ResponsiveContainer width="100%" height={300}>
                         <AreaChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorHeight" x1="0" y1="0" x2="0" y2="1">
@@ -1044,8 +863,8 @@ const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessmen
                             <YAxis yAxisId="right" orientation="right" stroke="#8884d8" label={{ value: 'Potência (W)', angle: -90, position: 'insideRight', fill: '#8884d8' }} />
                             <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
                             <Legend />
-                            <Area type="monotone" dataKey="height" name="Altura do Salto" stroke="#63BFAA" fillOpacity={1} fill="url(#colorHeight)" yAxisId="left" strokeWidth={2} />
-                            <Area type="monotone" dataKey="power" name="Potência" stroke="#8884d8" fillOpacity={1} fill="url(#colorPower)" yAxisId="right" strokeWidth={2} />
+                            <Area type="monotone" dataKey="height" name="Altura do Salto" stroke="#63BFAA" fillOpacity={1} fill="url(#colorHeight)" yAxisId="left" />
+                            <Area type="monotone" dataKey="power" name="Potência" stroke="#8884d8" fillOpacity={1} fill="url(#colorPower)" yAxisId="right" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
@@ -1056,33 +875,15 @@ const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean, onEdit: (assessmen
                     <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
                 </div>
             )}
-             {!isPrinting && assessments.length > 1 && (
-                <div className="mt-6">
-                    <h4 className="font-semibold text-brand-light mb-2">Histórico de Avaliações</h4>
-                    <div className="space-y-2">
-                        {assessments.slice(1).map(asm => (
-                            <div key={asm.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded-md text-sm">
-                                <span>{formatDate(asm.date)} - Altura: {asm.height.toFixed(1)}cm, Potência: {asm.power}W</span>
-                                {!isReadOnly && (
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
-                                        <button onClick={() => onDelete(asm.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
          </div>
     );
 };
 
-const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean, onEdit: (assessment: Vo2max) => void, onDelete: (assessmentId: string) => void, isReadOnly?: boolean }> = ({ assessments, isPrinting, onEdit, onDelete, isReadOnly }) => {
+const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean }> = ({ assessments, isPrinting }) => {
     const latest = assessments[0];
     if (!latest) return <NoData />;
 
-    const { trainingZones, trainingPaces, partialVelocities } = calculateVo2maxZones(latest);
+    const { trainingZones, paces, vams, partialVelocities } = calculateVo2maxZones(latest);
     const zoneColors = ["#3182CE", "#38A169", "#F6E05E", "#F56565", "#E53E3E"];
 
     const metrics = [
@@ -1102,15 +903,7 @@ const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean, onEdit: (ass
 
     return (
          <div className="space-y-8">
-            <div className="flex justify-end items-center gap-2 text-sm text-gray-400">
-                Última avaliação: {formatDate(latest.date)}
-                 {!isReadOnly && !isPrinting && (
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => onEdit(latest)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
-                        <button onClick={() => onDelete(latest.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
-                    </div>
-                )}
-            </div>
+            <div className="text-right text-sm text-gray-400">Última avaliação: {formatDate(latest.date)}</div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {metrics.map(metric => (
@@ -1135,30 +928,30 @@ const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean, onEdit: (ass
                  </div>
             </div>
             
-            <div>
-                <h4 className="font-semibold text-center mb-4 text-brand-light">Ritmos e Velocidades de Treino (por % de VAM)</h4>
-                <div className="bg-gray-700/50 rounded-lg overflow-hidden shadow-md">
-                    <table className="w-full text-center">
-                        <thead className="bg-gray-800/50">
-                            <tr>
-                                <th className="p-3 text-sm font-semibold text-brand-light tracking-wider">Intensidade</th>
-                                <th className="p-3 text-sm font-semibold text-brand-light tracking-wider">Pace (min/km)</th>
-                                <th className="p-3 text-sm font-semibold text-brand-light tracking-wider">Velocidade (km/h)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {trainingPaces.map((item, index) => (
-                                <tr key={item.percentage} className={index % 2 === 0 ? 'bg-gray-700/25' : 'bg-gray-700/50'}>
-                                    <td className="p-3 whitespace-nowrap text-gray-300">{item.percentage}%</td>
-                                    <td className="p-3 whitespace-nowrap font-mono font-bold text-white">{item.pace}</td>
-                                    <td className="p-3 whitespace-nowrap font-mono font-bold text-white">{item.speed}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+             <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                     <h4 className="font-semibold text-center mb-4 text-brand-light">Pace por % de VAM</h4>
+                    <div className="space-y-2">
+                        {paces.map(p => (
+                             <div key={p.percentage} className="flex justify-between p-2 bg-gray-700/50 rounded-md text-sm">
+                                <span>{p.percentage}%</span>
+                                <span className="font-mono font-bold text-white">{p.pace} min/km</span>
+                             </div>
+                        ))}
+                    </div>
                 </div>
-            </div>
-
+                 <div>
+                     <h4 className="font-semibold text-center mb-4 text-brand-light">Velocidade por % de VAM</h4>
+                     <div className="space-y-2">
+                         {vams.map(v => (
+                             <div key={v.percentage} className="flex justify-between p-2 bg-gray-700/50 rounded-md text-sm">
+                                <span>{v.percentage}%</span>
+                                <span className="font-mono font-bold text-white">{v.speed} km/h</span>
+                             </div>
+                         ))}
+                     </div>
+                 </div>
+             </div>
              <div>
                 <h4 className="font-semibold text-center mb-4 text-brand-light">Velocidades Parciais</h4>
                 <div className="space-y-4">
@@ -1166,7 +959,7 @@ const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean, onEdit: (ass
                         <Card key={dist.distance} className="!p-2">
                             <h5 className="font-bold text-center text-brand-secondary">{dist.distance}m</h5>
                             <div className={isPrinting ? '' : 'overflow-x-auto'}>
-                                <table className={`w-full text-center mt-2 partial-velocities-table ${isPrinting ? 'text-[11px]' : 'text-sm'}`}>
+                                <table className={`w-full text-center mt-2 ${isPrinting ? 'text-[11px]' : 'text-sm'}`}>
                                     <thead className="text-gray-400">
                                         <tr>{dist.results.map(r => <th key={r.intensity} className="p-1 font-medium">{r.intensity}%</th>)}</tr>
                                     </thead>
@@ -1186,31 +979,13 @@ const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean, onEdit: (ass
                     <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
                 </div>
             )}
-             {!isPrinting && assessments.length > 1 && (
-                <div className="mt-6">
-                    <h4 className="font-semibold text-brand-light mb-2">Histórico de Avaliações</h4>
-                    <div className="space-y-2">
-                        {assessments.slice(1).map(asm => (
-                            <div key={asm.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded-md text-sm">
-                                <span>{formatDate(asm.date)} - VO₂max: {asm.vo2max.toFixed(1)}, VAM: {asm.vam.toFixed(1)} km/h</span>
-                                {!isReadOnly && (
-                                     <div className="flex items-center gap-3">
-                                        <button onClick={() => onEdit(asm)} className="text-gray-400 hover:text-white"><EditIcon className="w-4 h-4" /></button>
-                                        <button onClick={() => onDelete(asm.id)} className="text-gray-400 hover:text-accent-red"><TrashIcon className="w-4 h-4" /></button>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
          </div>
     );
 };
 
 // --- ATHLETE COMPONENTS ---
 
-const AthleteForm: FC<{ onSave: (data: Omit<Athlete, 'id' | 'assessments'> | Athlete) => void; onCancel: () => void; athlete?: Athlete, onDelete?: (athleteId: string) => void }> = ({ onSave, onCancel, athlete, onDelete }) => {
+const AthleteForm: FC<{ onSave: (athlete: Omit<Athlete, 'id' | 'assessments'>) => void; onCancel: () => void; athlete?: Athlete }> = ({ onSave, onCancel, athlete }) => {
     const [name, setName] = useState(athlete?.name || '');
     const [dob, setDob] = useState(athlete?.dob || '');
     const [injuryHistory, setInjuryHistory] = useState(athlete?.injuryHistory || '');
@@ -1221,11 +996,7 @@ const AthleteForm: FC<{ onSave: (data: Omit<Athlete, 'id' | 'assessments'> | Ath
             toast.error("Nome e Data de Nascimento são obrigatórios.");
             return;
         }
-        if (athlete) {
-            onSave({ ...athlete, name, dob, injuryHistory });
-        } else {
-            onSave({ name, dob, injuryHistory });
-        }
+        onSave({ name, dob, injuryHistory });
     };
 
     return (
@@ -1251,48 +1022,21 @@ const AthleteForm: FC<{ onSave: (data: Omit<Athlete, 'id' | 'assessments'> | Ath
                     <textarea value={injuryHistory} onChange={(e) => setInjuryHistory(e.target.value)} rows={3} className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-brand-primary focus:border-brand-primary"></textarea>
                 </div>
             </div>
-            <div className="mt-6 flex justify-between items-center">
-                <div>
-                    {athlete && onDelete && (
-                        <Button onClick={() => onDelete(athlete.id)} variant="danger">
-                            <TrashIcon className="w-5 h-5" /> Excluir Atleta
-                        </Button>
-                    )}
-                </div>
-                <div className="flex gap-4">
-                    <Button onClick={onCancel} variant="secondary">Cancelar</Button>
-                    <Button onClick={handleSubmit}>{athlete ? 'Salvar Alterações' : 'Adicionar Atleta'}</Button>
-                </div>
+            <div className="mt-6 flex justify-end gap-4">
+                <Button onClick={onCancel} variant="secondary">Cancelar</Button>
+                <Button onClick={handleSubmit}>{athlete ? 'Salvar Alterações' : 'Adicionar Atleta'}</Button>
             </div>
         </Card>
     );
 };
 
-const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: (athleteId: string, type: AssessmentType, data: any) => Promise<void>; updateAssessment: (athleteId: string, type: AssessmentType, data: any) => Promise<void>; deleteAssessment: (athleteId: string, type: AssessmentType, assessmentId: string) => Promise<void>; onExportPDF: (type: AssessmentType | 'all') => void; userRole: 'admin' | 'student'; onEdit: () => void; onRequestDelete: () => void; }> = ({ athlete, onBack, addAssessment, updateAssessment, deleteAssessment, onExportPDF, userRole, onEdit, onRequestDelete }) => {
+const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: (athleteId: string, type: AssessmentType, data: any) => void; onExportPDF: (type: AssessmentType | 'all') => void; userRole: 'admin' | 'student'; }> = ({ athlete, onBack, addAssessment, onExportPDF, userRole }) => {
     const [addingAssessment, setAddingAssessment] = useState<AssessmentType | null>(null);
-    const [editingAssessment, setEditingAssessment] = useState<{type: AssessmentType, data: AssessmentData} | null>(null);
     const [activeTab, setActiveTab] = useState<AssessmentType>('bioimpedance');
-    const [confirmDeleteAssessment, setConfirmDeleteAssessment] = useState<{type: AssessmentType, id: string} | null>(null);
 
-    const handleAddAssessment = async (type: AssessmentType, data: any) => {
-        await addAssessment(athlete.id, type, data);
+    const handleAddAssessment = (type: AssessmentType, data: any) => {
+        addAssessment(athlete.id, type, data);
         setAddingAssessment(null);
-    };
-
-    const handleUpdateAssessment = async (type: AssessmentType, data: any) => {
-        await updateAssessment(athlete.id, type, data);
-        setEditingAssessment(null);
-    };
-
-    const handleRequestDeleteAssessment = (type: AssessmentType, assessmentId: string) => {
-        setConfirmDeleteAssessment({ type, id: assessmentId });
-    };
-
-    const executeDeleteAssessment = async () => {
-        if (confirmDeleteAssessment) {
-            await deleteAssessment(athlete.id, confirmDeleteAssessment.type, confirmDeleteAssessment.id);
-            setConfirmDeleteAssessment(null);
-        }
     };
 
     const assessmentMap: { type: AssessmentType; title: string; shortTitle: string, ViewComponent: FC<any>, icon: React.ReactNode }[] = [
@@ -1304,35 +1048,20 @@ const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: 
     ];
     
     const getFormComponent = (type: AssessmentType | null) => {
-        const isEditing = editingAssessment?.type === type;
-        const initialData = isEditing ? editingAssessment.data : undefined;
-        const onSave = isEditing ? (data: any) => handleUpdateAssessment(type!, data) : (data: any) => handleAddAssessment(type!, data);
-        const onCancel = isEditing ? () => setEditingAssessment(null) : () => setAddingAssessment(null);
-
         switch(type) {
-            case 'bioimpedance': return <BioimpedanceForm onSave={onSave} onCancel={onCancel} initialData={initialData as Bioimpedance} />;
-            case 'isometricStrength': return <IsometricStrengthForm onSave={onSave} onCancel={onCancel} initialData={initialData as IsometricStrength} />;
-            case 'cmj': return <CMJForm onSave={onSave} onCancel={onCancel} initialData={initialData as Cmj} />;
-            case 'generalStrength': return <GeneralStrengthForm onSave={onSave} onCancel={onCancel} initialData={initialData as GeneralStrength} />;
-            case 'vo2max': return <VO2MaxForm onSave={onSave} onCancel={onCancel} initialData={initialData as Vo2max} />;
+            case 'bioimpedance': return <BioimpedanceForm onAdd={(data) => handleAddAssessment('bioimpedance', data)} onCancel={() => setAddingAssessment(null)} />;
+            case 'isometricStrength': return <IsometricStrengthForm onAdd={(data) => handleAddAssessment('isometricStrength', data)} onCancel={() => setAddingAssessment(null)} />;
+            case 'cmj': return <CMJForm onAdd={(data) => handleAddAssessment('cmj', data)} onCancel={() => setAddingAssessment(null)} />;
+            case 'generalStrength': return <GeneralStrengthForm onAdd={(data) => handleAddAssessment('generalStrength', data)} onCancel={() => setAddingAssessment(null)} />;
+            case 'vo2max': return <VO2MaxForm onAdd={(data) => handleAddAssessment('vo2max', data)} onCancel={() => setAddingAssessment(null)} />;
             default: return null;
         }
     }
 
     const activeAssessmentDetails = assessmentMap.find(a => a.type === activeTab);
 
-    const isFormOpen = addingAssessment === activeTab || editingAssessment?.type === activeTab;
-    const formType = editingAssessment?.type === activeTab ? editingAssessment.type : addingAssessment;
-
     return (
         <div className="space-y-6">
-            {confirmDeleteAssessment && (
-                <ConfirmationModal 
-                    message={`Tem certeza que deseja excluir esta avaliação de ${confirmDeleteAssessment.type}? Esta ação não pode ser desfeita.`}
-                    onConfirm={executeDeleteAssessment}
-                    onCancel={() => setConfirmDeleteAssessment(null)}
-                />
-            )}
             <div className="flex justify-between items-center mb-4">
                  <Button onClick={onBack} variant="secondary">
                      {userRole === 'admin' ? <><ArrowLeftIcon className="w-5 h-5" /> Voltar</> : <><LogoutIcon className="w-5 h-5" /> Sair</>}
@@ -1342,22 +1071,10 @@ const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: 
                 </Button>
             </div>
             <Card>
-                <div className="flex items-start md:items-center gap-4">
-                    <UserIcon className="w-16 h-16 text-brand-secondary flex-shrink-0" />
-                    <div className="flex-grow">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
-                            <h2 className="text-3xl font-bold text-white">{athlete.name}</h2>
-                            {userRole === 'admin' && (
-                                <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                                    <button onClick={onEdit} className="text-gray-400 hover:text-white transition-colors" title="Editar Atleta">
-                                        <EditIcon className="w-5 h-5" />
-                                    </button>
-                                    <button onClick={onRequestDelete} className="text-gray-400 hover:text-accent-red transition-colors" title="Excluir Atleta">
-                                        <TrashIcon className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                <div className="flex items-center gap-4">
+                    <UserIcon className="w-16 h-16 text-brand-secondary" />
+                    <div>
+                        <h2 className="text-3xl font-bold text-white">{athlete.name}</h2>
                         <p className="text-gray-400">{calculateAge(athlete.dob)} anos ({formatDate(athlete.dob)})</p>
                     </div>
                 </div>
@@ -1390,15 +1107,10 @@ const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: 
                     onExportPDF={() => onExportPDF(activeTab)}
                     isReadOnly={userRole === 'student'}
                 >
-                    {isFormOpen ? (
-                        getFormComponent(formType)
+                    {addingAssessment === activeTab ? (
+                        getFormComponent(activeTab)
                     ) : (
-                        <activeAssessmentDetails.ViewComponent 
-                            assessments={athlete.assessments[activeTab]} 
-                            onEdit={(data: AssessmentData) => setEditingAssessment({type: activeTab, data})}
-                            onDelete={(assessmentId: string) => handleRequestDeleteAssessment(activeTab, assessmentId)}
-                            isReadOnly={userRole === 'student'}
-                        />
+                        <activeAssessmentDetails.ViewComponent assessments={athlete.assessments[activeTab]} />
                     )}
                 </AssessmentSection>
             )}
@@ -1467,7 +1179,7 @@ const PrintView: FC<{ athlete: Athlete; reportType: AssessmentType | 'all' }> = 
     ];
     
     const sectionsToPrint = reportType === 'all'
-        ? assessmentMap.filter(sec => athlete.assessments[sec.type]?.length > 0)
+        ? assessmentMap
         : assessmentMap.filter(sec => sec.type === reportType);
 
     return (
@@ -1486,70 +1198,19 @@ const PrintView: FC<{ athlete: Athlete; reportType: AssessmentType | 'all' }> = 
                 }
                 .no-print { display: none !important; }
             }
-            /* --- General Print Typography & Colors --- */
-            .print-container {
-                font-size: 12px; /* Set a base font size for print */
-            }
             .print-container .text-white { color: #111827 !important; }
             .print-container .text-gray-200 { color: #1f2937 !important; }
             .print-container .text-gray-300 { color: #374151 !important; }
             .print-container .text-gray-400 { color: #4b5563 !important; }
             .print-container .text-gray-500 { color: #6b7280 !important; }
             .print-container .text-gray-600 { color: #4b5563 !important; }
-            .print-container .text-brand-light { color: #1A4340 !important; font-weight: 600; }
-            .print-container .text-brand-secondary { color: #2D7A74 !important; }
-
-            /* --- Status Colors --- */
-            .print-container .text-accent-green { color: #38A169 !important; }
-            .print-container .text-accent-red { color: #E53E3E !important; }
-            .print-container .text-yellow-400 { color: #D97706 !important; } /* Darker yellow for print */
-            
-            /* --- Layout & Cards --- */
-            .print-container .bg-gray-700, 
-            .print-container .bg-gray-700\\/50, 
-            .print-container .bg-gray-800 { 
-                background-color: #ffffff !important;
-                border: 1px solid #e5e7eb !important;
-                box-shadow: none !important;
-            }
-            .print-container .p-3 { padding: 0.5rem; }
-            .print-container .p-4 { padding: 0.75rem; }
-
-            /* --- Tables --- */
-            .print-container table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 1rem;
-            }
-            .print-container th, .print-container td {
-                border: 1px solid #e5e7eb;
-                padding: 6px;
-                text-align: center;
-            }
-            .print-container thead th {
-                background-color: #f3f4f6 !important;
-                color: #111827 !important;
-                font-weight: 600;
-                padding: 8px 6px;
-            }
-            .print-container tbody tr:nth-child(even) {
+            .print-container .bg-gray-700, .print-container .bg-gray-700\\/50, .print-container .bg-gray-800 { 
                 background-color: #f9fafb !important;
+                border: 1px solid #e5e7eb;
             }
-
-            /* --- Specific Component Adjustments --- */
-            /* VO2 Max Partial Velocities Table */
-            .print-container .partial-velocities-table td, .print-container .partial-velocities-table th {
-                padding: 4px 2px;
-                font-size: 10px;
-            }
-            .print-container .partial-velocities-table .font-bold {
-                font-weight: 600;
-            }
-            
-            /* Headers & Titles */
-            .print-container h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-            .print-container h4 { margin-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.25rem; }
-            .print-container .text-center { text-align: center; }
+            .print-container .shadow-lg { box-shadow: none !important; }
+            .print-container .text-brand-light { color: #1A4340 !important; }
+            .print-container .text-brand-secondary { color: #2D7A74 !important; }
         `}</style>
         <div className="print-container bg-white text-gray-900 font-sans">
             {sectionsToPrint.map(({ type, title, ViewComponent }, index) => (
@@ -1591,22 +1252,61 @@ const LoginPage: FC<{ onLogin: (user: User) => void; athletes: Athlete[] }> = ({
     const [selectedAthleteId, setSelectedAthleteId] = useState<string>(athletes[0]?.id || '');
     const [dob, setDob] = useState('');
 
-    const handleAdminLogin = (e: React.FormEvent) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [showSignup, setShowSignup] = useState(false);
+
+    const handleAdminLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (password === '1234') {
-            onLogin({ role: 'admin' });
-        } else {
-            toast.error('Senha incorreta.');
+        try {
+            const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+            const json = await res.json();
+            if (!res.ok) return toast.error(json.error || 'Falha no login');
+            window.localStorage.setItem('lb_sports_token', json.token);
+            onLogin({ role: json.user.role });
+        } catch (error) {
+            console.error('Admin login error', error);
+            toast.error('Erro ao tentar fazer login.');
         }
     };
 
-    const handleStudentLogin = (e: React.FormEvent) => {
+    const handleStudentLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        // If email provided, use credentials login; otherwise fallback to DOB-based local login for compatibility
+        if (email && password) {
+            try {
+                const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+                const json = await res.json();
+                if (!res.ok) return toast.error(json.error || 'Falha no login');
+                window.localStorage.setItem('lb_sports_token', json.token);
+                onLogin({ role: json.user.role, athleteId: (json.user.role === 'student' ? json.user.id : undefined) });
+            } catch (error) {
+                console.error('Student login error', error);
+                toast.error('Erro ao tentar fazer login.');
+            }
+            return;
+        }
+
         const athlete = athletes.find(a => a.id === selectedAthleteId);
         if (athlete && athlete.dob === dob) {
             onLogin({ role: 'student', athleteId: athlete.id });
         } else {
             toast.error('Aluno ou data de nascimento incorretos.');
+        }
+    };
+
+    const handleSignup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            const roleToCreate = mode === 'admin' ? 'admin' : 'student';
+            const res = await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, role: roleToCreate }) });
+            const json = await res.json();
+            if (!res.ok) return toast.error(json.error || 'Falha ao criar usuário');
+            window.localStorage.setItem('lb_sports_token', json.token);
+            onLogin({ role: json.user.role });
+        } catch (error) {
+            console.error('Signup error', error);
+            toast.error('Erro ao criar usuário.');
         }
     };
 
@@ -1633,10 +1333,38 @@ const LoginPage: FC<{ onLogin: (user: User) => void; athletes: Athlete[] }> = ({
                             <label className="block text-sm font-medium text-gray-400 mb-1">Data de Nascimento</label>
                             <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
                         </div>
-                        <Button type="submit" className="w-full !mt-6">Entrar</Button>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Ou faça login com Email</label>
+                            <input type="email" placeholder="seu@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white mb-2" />
+                            <input type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <button type="button" onClick={() => setShowSignup(s => !s)} className="text-sm text-gray-400 underline">{showSignup ? 'Fechar cadastro' : 'Criar conta'}</button>
+                            <Button type="submit" className="!mt-0">Entrar</Button>
+                        </div>
+
+                        {showSignup && (
+                            <form onSubmit={handleSignup} className="space-y-4 mt-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Senha</label>
+                                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
+                                </div>
+                                <div className="flex justify-end">
+                                    <Button type="submit">Criar conta</Button>
+                                </div>
+                            </form>
+                        )}
                     </form>
                 ) : (
                     <form onSubmit={handleAdminLogin} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
+                        </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-400 mb-1">Senha</label>
                             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
@@ -1652,17 +1380,42 @@ const LoginPage: FC<{ onLogin: (user: User) => void; athletes: Athlete[] }> = ({
 
 // --- MAIN APP ---
 const App: FC = () => {
-  const { athletes, loading, addAthlete, updateAthlete, deleteAthlete, addAssessment, updateAssessment, deleteAssessment } = useAthletes();
+  const { athletes, loading, addAthlete, updateAthlete, addAssessment } = useAthletes();
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<'list' | 'profile' | 'form'>('list');
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [reportToExportPDF, setReportToExportPDF] = useState<AssessmentType | 'all' | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [confirmDeleteAthleteId, setConfirmDeleteAthleteId] = useState<string | null>(null);
   
-  // No need to check for saved user session as data is in-memory and resets on refresh.
-  // The login screen will always show first.
-  
+  // Check for saved user session on initial load
+  useEffect(() => {
+    // Try to restore session from token, fallback to savedUser for compatibility
+    const restore = async () => {
+      try {
+        const token = localStorage.getItem('lb_sports_token');
+        if (token) {
+          const res = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+          if (res.ok) {
+            const json = await res.json();
+            setUser({ role: json.user.role, ...(json.user.role === 'student' ? { athleteId: json.user.id } : {}) } as User);
+            localStorage.setItem('lb_sports_user', JSON.stringify({ role: json.user.role, ...(json.user.role === 'student' ? { athleteId: json.user.id } : {}) }));
+            return;
+          }
+        }
+
+        const savedUser = localStorage.getItem('lb_sports_user');
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        }
+      } catch (error) {
+        console.error("Failed to restore session", error);
+        localStorage.removeItem('lb_sports_user');
+        localStorage.removeItem('lb_sports_token');
+      }
+    };
+    restore();
+  }, []);
+
   const filteredAthletes = useMemo(() => 
     athletes.filter(athlete =>
       athlete.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1685,12 +1438,15 @@ const App: FC = () => {
 
   const handleLogin = (loggedInUser: User) => {
       setUser(loggedInUser);
+      localStorage.setItem('lb_sports_user', JSON.stringify(loggedInUser));
   };
 
   const handleLogout = () => {
       setUser(null);
       setSelectedAthleteId(null);
       setCurrentView('list');
+      localStorage.removeItem('lb_sports_user');
+      localStorage.removeItem('lb_sports_token');
   };
 
   const handleSelectAthlete = (athlete: Athlete) => {
@@ -1707,37 +1463,11 @@ const App: FC = () => {
       setSelectedAthleteId(null);
       setCurrentView('form');
   };
-
-  const handleStartEditAthlete = () => {
-      setCurrentView('form');
-  };
-
-  const handleSaveAthleteForm = async (data: Omit<Athlete, 'id' | 'assessments'> | Athlete) => {
-    if ('id' in data) { // It's an update
-        await updateAthlete(data as Athlete);
-        setCurrentView('profile');
-    } else { // It's a new athlete
-        await addAthlete(data);
-        setCurrentView('list');
-    }
-  };
-
-  const handleCancelAthleteForm = () => {
-      if (selectedAthleteId) { // Was editing
-          setCurrentView('profile');
-      } else { // Was adding
-          setCurrentView('list');
-      }
-  };
   
-  const executeDeleteAthlete = async () => {
-    if (confirmDeleteAthleteId) {
-        await deleteAthlete(confirmDeleteAthleteId);
-        setConfirmDeleteAthleteId(null);
-        handleBackToList();
-    }
+  const handleSaveAthlete = (data: Omit<Athlete, 'id' | 'assessments'>) => {
+      addAthlete(data);
+      setCurrentView('list');
   };
-
 
   const renderContent = () => {
     if (loading) return <div className="flex justify-center items-center h-screen"><p>Carregando dados...</p></div>;
@@ -1755,17 +1485,7 @@ const App: FC = () => {
     
     if (user.role === 'student') {
         if (selectedAthlete) {
-            return <AthleteProfile 
-                athlete={selectedAthlete} 
-                onBack={handleLogout} 
-                addAssessment={addAssessment} 
-                updateAssessment={updateAssessment}
-                deleteAssessment={deleteAssessment}
-                onExportPDF={setReportToExportPDF} 
-                userRole="student" 
-                onEdit={() => {}}
-                onRequestDelete={() => {}} 
-            />;
+            return <AthleteProfile athlete={selectedAthlete} onBack={handleLogout} addAssessment={addAssessment} onExportPDF={setReportToExportPDF} userRole="student" />;
         }
         return <div className="text-center"><p>Erro: Atleta não encontrado.</p><Button onClick={handleLogout}>Sair</Button></div>
     }
@@ -1773,24 +1493,9 @@ const App: FC = () => {
     // Admin View
     switch (currentView) {
       case 'profile':
-        return selectedAthlete && <AthleteProfile 
-            athlete={selectedAthlete} 
-            onBack={handleBackToList} 
-            addAssessment={addAssessment} 
-            updateAssessment={updateAssessment}
-            deleteAssessment={deleteAssessment}
-            onExportPDF={setReportToExportPDF} 
-            userRole="admin" 
-            onEdit={handleStartEditAthlete}
-            onRequestDelete={() => setConfirmDeleteAthleteId(selectedAthlete.id)} 
-        />;
+        return selectedAthlete && <AthleteProfile athlete={selectedAthlete} onBack={handleBackToList} addAssessment={addAssessment} onExportPDF={setReportToExportPDF} userRole="admin" />;
       case 'form':
-        return <AthleteForm 
-            onSave={handleSaveAthleteForm} 
-            onCancel={handleCancelAthleteForm} 
-            athlete={selectedAthlete ?? undefined}
-            onDelete={() => setConfirmDeleteAthleteId(selectedAthlete!.id)}
-        />
+        return <AthleteForm onSave={handleSaveAthlete} onCancel={handleBackToList}/>
       case 'list':
       default:
         return <AthleteList athletes={filteredAthletes} onSelect={handleSelectAthlete} onAdd={handleShowAddForm} searchTerm={searchTerm} onSearchChange={setSearchTerm} />;
@@ -1801,13 +1506,6 @@ const App: FC = () => {
 
   return (
     <div className={`min-h-screen font-sans ${reportToExportPDF ? 'bg-white' : 'bg-gray-900 text-gray-200'}`}>
-        {confirmDeleteAthleteId && (
-            <ConfirmationModal 
-                message="Tem certeza que deseja excluir este atleta? Todos os dados e avaliações associados serão perdidos permanentemente."
-                onConfirm={executeDeleteAthlete}
-                onCancel={() => setConfirmDeleteAthleteId(null)}
-            />
-        )}
         {showHeaderFooter && (
             <header className="bg-gray-800/50 backdrop-blur-sm sticky top-0 z-10 shadow-lg no-print">
                 <div className="container mx-auto px-4 py-3 flex justify-between items-center">

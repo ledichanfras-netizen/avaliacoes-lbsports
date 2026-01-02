@@ -59,7 +59,11 @@ export const useAthletes = () => {
 
   useEffect(() => {
     // Carregar atletas do servidor; fallback para MOCK_ATHLETES
-    fetch('/api/athletes')
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('lb_sports_token') : null;
+    const headers: Record<string,string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    fetch('/api/athletes', { headers })
       .then(res => res.json())
       .then(res => {
         if (res && Array.isArray(res.athletes)) {
@@ -84,15 +88,34 @@ export const useAthletes = () => {
   const saveTimeoutRef = { current: null as number | null };
   const saveAthletesToServer = () => {
     const key = (import.meta as any).env.VITE_API_KEY;
+    const token = typeof window !== 'undefined' ? window.localStorage.getItem('lb_sports_token') : null;
+    const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+    if (key) headers['x-api-key'] = key;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     fetch('/api/athletes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+      headers,
       body: JSON.stringify({ athletes }),
     }).then(res => {
       if (!res.ok) throw new Error('Falha ao salvar no servidor');
-    }).catch(error => {
+    }).catch(async error => {
       console.error('Failed to save athletes to server', error);
-      toast.error('Erro ao salvar os dados no servidor.');
+      toast.error('Erro ao salvar os dados no servidor. Revertendo alterações locais.');
+      // Attempt to reload authoritative state from the server to revert local optimistic changes
+      try {
+        const res = await fetch('/api/athletes', { headers });
+        const json = await res.json();
+        if (res.ok && Array.isArray(json.athletes)) {
+          const mapped = json.athletes.map((a:any) => ({
+            ...a,
+            assessments: a.assessments || { bioimpedance: [], isometricStrength: [], generalStrength: [], cmj: [], vo2max: [] }
+          }));
+          setAthletes(mapped);
+        }
+      } catch (e) {
+        console.error('Failed to reload athletes from server after save failure', e);
+      }
     });
   };
 
@@ -129,23 +152,36 @@ export const useAthletes = () => {
   };
   
   const addAssessment = (athleteId: string, type: AssessmentType, data: Omit<AssessmentData, 'id'>) => {
-    const newAssessment = {
-      ...data,
-      id: new Date().toISOString(),
-      date: data.date, // Explicitly use the date from the form data
-    } as AssessmentData;
+    try {
+      const newAssessment = {
+        ...data,
+        id: new Date().toISOString(),
+        date: data.date, // Explicitly use the date from the form data
+      } as AssessmentData;
 
-    setAthletes(prev => prev.map(athlete => {
-      if (athlete.id === athleteId) {
-        const updatedAssessments = {
-          ...athlete.assessments,
-          [type]: [...athlete.assessments[type], newAssessment].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-        };
-        return { ...athlete, assessments: updatedAssessments };
-      }
-      return athlete;
-    }));
-    toast.success(`Nova avaliação de ${type} adicionada.`);
+      setAthletes(prev => prev.map(athlete => {
+        if (athlete.id === athleteId) {
+          // Normalize assessments: support legacy array shape or missing data
+          const existing = athlete.assessments && typeof athlete.assessments === 'object'
+            ? athlete.assessments as any
+            : { bioimpedance: [], isometricStrength: [], generalStrength: [], cmj: [], vo2max: [] } as any;
+
+          const currentList = Array.isArray(existing[type]) ? existing[type] : [];
+
+          const updatedAssessments = {
+            ...existing,
+            [type]: [...currentList, newAssessment].sort((a:any,b:any) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+          };
+          return { ...athlete, assessments: updatedAssessments };
+        }
+        return athlete;
+      }));
+
+      toast.success(`Nova avaliação de ${type} adicionada.`);
+    } catch (error) {
+      console.error('Falha ao adicionar avaliação', error);
+      toast.error('Falha ao adicionar. Revertendo.');
+    }
   };
 
 

@@ -11,8 +11,9 @@ Dica: teste localmente com `npm run dev`, depois faça o deploy para o Vercel e 
 Variáveis de ambiente necessárias:
 
 - `DATABASE_URL` (Vercel Postgres)
-- `API_KEY` (opcional, recomendado) — chave secreta para proteger endpoints de escrita
+- `API_KEY` (opcional, recomendado) — chave secreta para proteger endpoints de escrita (compatibilidade server-to-server)
 - `VITE_API_KEY` (opcional, recomendado) — chave exposta ao cliente para autorizar chamadas de gravação (defina o mesmo valor de `API_KEY` em Vercel para simplicidade)
+- `JWT_SECRET` (recomendado) — segredo para assinaturas JWT (use uma chave forte). Quando configurado, o aplicativo usa autenticação baseada em tokens para login de usuários e proteção dos endpoints.
 
 Exemplos rápidos com curl (usando a chave):
 
@@ -49,3 +50,11 @@ VITE_API_KEY=REPLACE_ME_SECRET
 ```
 
 No Vercel: defina `API_KEY` e `VITE_API_KEY` com o mesmo valor nas variáveis de ambiente (Settings → Environment Variables) e re-deploy o projeto.
+
+Criando um usuário inicial (ex.: admin) via curl:
+
+```
+curl -X POST https://<seu-site>/api/auth/signup -H "Content-Type: application/json" -d '{"email":"admin@example.com","password":"sua-senha-segura","role":"admin"}'
+```
+
+Isso retorna um token JWT que pode ser usado no header `Authorization: Bearer <token>` para proteger as chamadas de escrita.
