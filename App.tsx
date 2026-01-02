@@ -1248,7 +1248,6 @@ const PrintView: FC<{ athlete: Athlete; reportType: AssessmentType | 'all' }> = 
 type User = { role: 'admin' } | { role: 'student'; athleteId: string };
 const LoginPage: FC<{ onLogin: (user: User) => void; athletes: Athlete[] }> = ({ onLogin, athletes }) => {
     const [mode, setMode] = useState<'student' | 'admin'>('student');
-    const [password, setPassword] = useState('');
     const [selectedAthleteId, setSelectedAthleteId] = useState<string>(athletes[0]?.id || '');
     const [dob, setDob] = useState('');
 
@@ -1295,8 +1294,8 @@ const LoginPage: FC<{ onLogin: (user: User) => void; athletes: Athlete[] }> = ({
         }
     };
 
-    const handleSignup = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSignup = async (e?: React.FormEvent) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
         try {
             const roleToCreate = mode === 'admin' ? 'admin' : 'student';
             const res = await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, role: roleToCreate }) });
@@ -1344,7 +1343,7 @@ const LoginPage: FC<{ onLogin: (user: User) => void; athletes: Athlete[] }> = ({
                         </div>
 
                         {showSignup && (
-                            <form onSubmit={handleSignup} className="space-y-4 mt-4">
+                            <div className="space-y-4 mt-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
                                     <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
@@ -1354,9 +1353,9 @@ const LoginPage: FC<{ onLogin: (user: User) => void; athletes: Athlete[] }> = ({
                                     <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
                                 </div>
                                 <div className="flex justify-end">
-                                    <Button type="submit">Criar conta</Button>
+                                    <Button type="button" onClick={() => handleSignup()} >Criar conta</Button>
                                 </div>
-                            </form>
+                            </div>
                         )}
                     </form>
                 ) : (
