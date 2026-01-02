@@ -97,11 +97,28 @@ export const useAthletes = () => {
       method: 'POST',
       headers,
       body: JSON.stringify({ athletes }),
-    }).then(res => {
-      if (!res.ok) throw new Error('Falha ao salvar no servidor');
+    }).then(async res => {
+      if (!res.ok) {
+        // Try to parse JSON error body
+        let err = 'Falha ao salvar no servidor';
+        try {
+          const json = await res.json();
+          if (json && json.error) err = json.error;
+        } catch (e) {
+          // ignore parse errors
+        }
+
+        if (res.status === 401) {
+          // clear token to force re-login
+          window.localStorage.removeItem('lb_sports_token');
+          toast.error(`${err}. Faça login novamente.`);
+        } else {
+          toast.error(err);
+        }
+        throw new Error(err);
+      }
     }).catch(async error => {
       console.error('Failed to save athletes to server', error);
-      toast.error('Erro ao salvar os dados no servidor. Revertendo alterações locais.');
       // Attempt to reload authoritative state from the server to revert local optimistic changes
       try {
         const res = await fetch('/api/athletes', { headers });
@@ -112,9 +129,13 @@ export const useAthletes = () => {
             assessments: a.assessments || { bioimpedance: [], isometricStrength: [], generalStrength: [], cmj: [], vo2max: [] }
           }));
           setAthletes(mapped);
+          toast.error('Erro ao salvar os dados no servidor. Alterações locais revertidas.');
+        } else {
+          toast.error('Erro ao salvar os dados no servidor.');
         }
       } catch (e) {
         console.error('Failed to reload athletes from server after save failure', e);
+        toast.error('Erro ao salvar os dados no servidor e falha ao recuperar estado do servidor.');
       }
     });
   };
