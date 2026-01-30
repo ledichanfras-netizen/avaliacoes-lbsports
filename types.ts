@@ -11,6 +11,61 @@ export interface Athlete {
     cmj: Cmj[];
     vo2max: Vo2max[];
   };
+  wellness: WellnessEntry[];
+  workouts: Workout[];
+}
+
+export interface WellnessEntry {
+  id: string;
+  date: string;
+  fatigue: number; // 1-5
+  sleep: number;   // 1-5
+  stress: number;  // 1-5
+  soreness: number; // 1-5
+  mood: number;    // 1-5
+  cognitiveLoad: number; // 1-5
+  readinessScore?: number; // 0-100
+}
+
+export interface ExerciseSet {
+  reps: number;
+  weight: number;
+  rpe: number; // RPE per set for real-time control
+}
+
+export interface PrescribedExercise {
+  id: string;
+  name: string;
+  muscleGroup: string;
+  sets: number;
+  reps: string; 
+  weight: string;
+  rest?: string;
+  notes?: string;
+  performedSets?: ExerciseSet[];
+  trainerFeedback?: string;
+}
+
+export interface Workout {
+  id: string;
+  date: string;
+  name: string;
+  phase: string;
+  status: 'planned' | 'completed' | 'in_progress';
+  exercises: PrescribedExercise[];
+  totalLoad?: number; 
+  rpe?: number; // Session RPE
+  durationMinutes?: number; 
+  monotony?: number; 
+  strain?: number;   
+  feedback?: string;
+  trainerNotes?: string;
+}
+
+export interface ExerciseDefinition {
+  id: string;
+  name: string;
+  muscleGroup: string;
 }
 
 export interface Assessment {
@@ -20,18 +75,20 @@ export interface Assessment {
 }
 
 export interface Bioimpedance extends Assessment {
-  weight: number; // kg
+  weight: number; 
   fatPercentage: number;
-  muscleMass: number; // kg
+  muscleMass: number; 
   visceralFat: number;
-  hydration: number; // %
+  hydration: number; 
 }
 
 export interface IsometricStrength extends Assessment {
-  quadricepsR: number; // kgf
-  quadricepsL: number; // kgf
-  hamstringsR: number; // kgf
-  hamstringsL: number; // kgf
+  halfSquatKgf: number;
+  quadricepsR: number; 
+  quadricepsL: number; 
+  hamstringsR: number; 
+  hamstringsL: number; 
+  rfdPeak?: number; 
 }
 
 export enum GeneralStrengthExercise {
@@ -42,37 +99,35 @@ export enum GeneralStrengthExercise {
 
 export interface GeneralStrength extends Assessment {
   exercise: GeneralStrengthExercise;
-  load: number; // kg
+  load: number; 
 }
 
 export interface Cmj extends Assessment {
-  height: number; // cm
-  power: number; // W
-  depth: number; // cm
-  unilateralJumpR?: number; // cm
-  unilateralJumpL?: number; // cm
-  load?: number; // kg
+  height: number; 
+  power: number; 
+  depth: number; 
+  timeToTakeoff?: number; // Required for RSI calculation
+  rsi?: number; 
 }
 
 export interface Vo2max extends Assessment {
-  vo2max: number; // ml/(kg*min)
-  maxHeartRate: number; // bpm
-  thresholdHeartRate: number; // bpm
-  maxVentilation: number; // l/min
-  thresholdVentilation: number; // l/min
-  maxLoad: number; // km/h
-  thresholdLoad: number; // km/h
-  vam: number; // km/h
-  rec10s: number; // bpm
-  rec30s: number; // bpm
-  rec60s: number; // bpm
-  score: number; // 0-100
+  vo2max: number; 
+  maxHeartRate: number; 
+  thresholdHeartRate: number; 
+  maxVentilation: number; 
+  thresholdVentilation: number; 
+  maxLoad: number; 
+  thresholdLoad: number; 
+  vam: number; 
+  rec10s: number; 
+  rec30s: number; 
+  rec60s: number; 
+  score: number; 
 }
 
 export type AssessmentType = 'bioimpedance' | 'isometricStrength' | 'generalStrength' | 'cmj' | 'vo2max';
-export type AssessmentData = Bioimpedance | IsometricStrength | GeneralStrength | Cmj | Vo2max;
 
 export interface IQRatio {
   ratio: number;
-  status: 'good' | 'bad';
+  status: 'good' | 'bad' | 'warning';
 }

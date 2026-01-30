@@ -1,1539 +1,1020 @@
-// FIX: Corrected React import to include FC, useState, and useMemo, and removed the incorrect 'aistudio' import.
+
 import React, { FC, useState, useMemo, useEffect } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area, ReferenceArea
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Radar, RadarChart, PolarGrid, PolarAngleAxis, AreaChart, Area, Legend
 } from 'recharts';
 import { useAthletes } from './hooks';
-import { Athlete, Bioimpedance, Cmj, GeneralStrengthExercise, IsometricStrength, Vo2max, AssessmentType, GeneralStrength } from './types';
-import { calculateAge, calculateIQRatios, calculateVo2maxZones, formatDate } from './utils';
+import { Athlete, WellnessEntry, Workout, AssessmentType, PrescribedExercise, ExerciseDefinition, Cmj } from './types';
+import { calculateAge, formatDate, calculateAsymmetry, interpretAsymmetry, calculateIQRatios, calculateACWR, calculateAdvancedMetrics, calculateWorkoutInternalLoad, calculateRSI } from './utils';
 import toast from 'react-hot-toast';
 
-// --- ICONS ---
-const UserIcon: FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-  </svg>
-);
-const PlusIcon: FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-);
-const ArrowLeftIcon: FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-    </svg>
-);
-const PDFIcon: FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-    </svg>
-);
-const SearchIcon: FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-);
-const LogoutIcon: FC<{ className?: string }> = ({ className }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-    </svg>
-);
-const BodyIcon: FC<{className?: string}> = ({className}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75l3 3m0 0l3-3m-3 3v6m0 0l-3 3m3-3l3 3m-6-1.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm12-1.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.75 6.75h.008v.008H6.75V6.75zm10.5 0h.008v.008h-.008V6.75z" />
-    </svg>
-);
-const MuscleIcon: FC<{className?: string}> = ({className}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5" opacity="0.5" />
-    </svg>
-);
-const BarbellIcon: FC<{className?: string}> = ({className}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12H3m16-4H5m14-4H7m10 16H7m12-4H5" />
-    </svg>
-);
-const JumpIcon: FC<{className?: string}> = ({className}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75" />
-    </svg>
-);
-const LungsIcon: FC<{className?: string}> = ({className}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6C9.25 6 7 8.25 7 11v6c0 2.21 1.79 4 4 4h2c2.21 0 4-1.79 4-4v-6c0-2.75-2.25-5-5-5z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6V4c0-1.1.9-2 2-2s2 .9 2 2v2m-4 11v3m4-3v3" />
-    </svg>
-);
+// --- CONSTANTS ---
+const INITIAL_EXERCISE_LIBRARY: ExerciseDefinition[] = [
+  // INFERIORES - PESO LIVRE
+  { id: '1', name: 'Agachamento Barra (High Bar)', muscleGroup: 'Quadríceps' },
+  { id: '2', name: 'Agachamento Halteres', muscleGroup: 'Quadríceps' },
+  { id: '3', name: 'Levantamento Terra Convencional', muscleGroup: 'Cadeia Posterior' },
+  { id: '4', name: 'Stiff Barra', muscleGroup: 'Isquiotibiais' },
+  { id: '5', name: 'Afundo Halteres', muscleGroup: 'Quadríceps/Glúteo' },
+  { id: '6', name: 'Búlgara Halteres', muscleGroup: 'Quadríceps/Glúteo' },
+  
+  // INFERIORES - MÁQUINAS
+  { id: '7', name: 'Leg Press 45º', muscleGroup: 'Inferiores' },
+  { id: '8', name: 'Leg Press Horizontal (Máquina)', muscleGroup: 'Inferiores' },
+  { id: '9', name: 'Hack Machine', muscleGroup: 'Quadríceps' },
+  { id: '10', name: 'Cadeira Extensora', muscleGroup: 'Quadríceps' },
+  { id: '11', name: 'Mesa Flexora (Deitada)', muscleGroup: 'Isquiotibiais' },
+  { id: '12', name: 'Cadeira Flexora (Sentada)', muscleGroup: 'Isquiotibiais' },
+  { id: '13', name: 'Cadeira Abdutora', muscleGroup: 'Glúteo Médio' },
+  { id: '14', name: 'Cadeira Adutora', muscleGroup: 'Adutores' },
+  { id: '15', name: 'Panturrilha Sentado (Máquina)', muscleGroup: 'Gastrocnêmio' },
+  { id: '16', name: 'Panturrilha em pé (Máquina)', muscleGroup: 'Gastrocnêmio' },
 
+  // PEITORAL
+  { id: '17', name: 'Supino Reto Barra', muscleGroup: 'Peitoral' },
+  { id: '18', name: 'Supino Inclinado Halteres', muscleGroup: 'Peitoral Superior' },
+  { id: '19', name: 'Supino Articulado (Máquina)', muscleGroup: 'Peitoral' },
+  { id: '20', name: 'Crucifixo Máquina (Peck Deck)', muscleGroup: 'Peitoral' },
+  { id: '21', name: 'Crossover Cabo (Polia Alta)', muscleGroup: 'Peitoral Inferior' },
 
-// --- LOGO ---
-const LbSportsLogo: FC<{ className?: string; isPrinting?: boolean }> = ({ className, isPrinting }) => (
-    <div className={`flex items-center gap-4 ${className}`}>
-        <svg width="60" height="40" viewBox="0 0 150 100" className={isPrinting ? 'text-black' : 'text-brand-secondary'}>
-            <path d="M10 80 Q 20 20, 40 50 T 70 80" stroke="currentColor" strokeWidth="5" fill="none" strokeLinecap="round" opacity="0.6"/>
-            <path d="M40 80 Q 50 20, 70 50 T 100 80" stroke="currentColor" strokeWidth="5" fill="none" strokeLinecap="round" opacity="0.8"/>
-            <path d="M70 80 Q 80 20, 100 50 T 130 80" stroke="currentColor" strokeWidth="5" fill="none" strokeLinecap="round"/>
-            <path d="M0 50 H 20 L 25 40 L 30 60 L 35 50 H 115 L 120 60 L 125 40 L 130 50 H 150" stroke={isPrinting ? '#888' : '#E53E3E'} strokeWidth="3" fill="none"/>
-        </svg>
-        <div>
-            <h1 className={`text-xl font-bold tracking-wider ${isPrinting ? 'text-black' : 'text-white'}`}>LB SPORTS</h1>
-            <p className={`text-xs ${isPrinting ? 'text-gray-600' : 'text-gray-300'}`}>Performance e Prevenção de Lesão</p>
-        </div>
-    </div>
-);
+  // COSTAS
+  { id: '22', name: 'Puxada Aberta (Cabo)', muscleGroup: 'Latíssimo' },
+  { id: '23', name: 'Puxada Triângulo (Cabo)', muscleGroup: 'Latíssimo' },
+  { id: '24', name: 'Puxada Articulada (Máquina)', muscleGroup: 'Dorsais' },
+  { id: '25', name: 'Remada Baixa (Cabo)', muscleGroup: 'Dorsais' },
+  { id: '26', name: 'Remada Unilateral Halter (Serrote)', muscleGroup: 'Dorsais' },
+  { id: '27', name: 'Remada Cavalinho', muscleGroup: 'Dorsais' },
+  { id: '28', name: 'Remada Articulada (Máquina)', muscleGroup: 'Dorsais' },
 
+  // OMBROS
+  { id: '29', name: 'Desenvolvimento Halteres (Sentado)', muscleGroup: 'Deltóides' },
+  { id: '30', name: 'Desenvolvimento Articulado (Máquina)', muscleGroup: 'Deltóides' },
+  { id: '31', name: 'Elevação Lateral Halteres', muscleGroup: 'Deltóide Lateral' },
+  { id: '32', name: 'Elevação Lateral Cabo', muscleGroup: 'Deltóide Lateral' },
+  { id: '33', name: 'Facepull Cabo', muscleGroup: 'Deltóide Posterior' },
+
+  // BRAÇOS
+  { id: '34', name: 'Rosca Direta Barra W', muscleGroup: 'Bíceps' },
+  { id: '35', name: 'Rosca Martelo Halteres', muscleGroup: 'Braquial/Bíceps' },
+  { id: '36', name: 'Rosca Scott Máquina', muscleGroup: 'Bíceps' },
+  { id: '37', name: 'Tríceps Pulley (Cabo)', muscleGroup: 'Tríceps' },
+  { id: '38', name: 'Tríceps Corda (Cabo)', muscleGroup: 'Tríceps' },
+  { id: '39', name: 'Tríceps Testa Halteres', muscleGroup: 'Tríceps' },
+  { id: '40', name: 'Tríceps Mergulho (Máquina)', muscleGroup: 'Tríceps' },
+
+  // CORE / OUTROS
+  { id: '41', name: 'Abdominal Supra (Máquina)', muscleGroup: 'Core' },
+  { id: '42', name: 'Plancha Isométrica', muscleGroup: 'Core' },
+  { id: '43', name: 'Power Clean', muscleGroup: 'Olímpico' },
+  { id: '44', name: 'Snatch Halter', muscleGroup: 'Olímpico' },
+];
+
+const WORKOUT_PHASES = [
+  'Força Máxima',
+  'Potência',
+  'Acessórios',
+  'Hipertrofia',
+  'Resistência',
+  'Recuperação/Deload',
+  'Especificidade'
+];
 
 // --- UI COMPONENTS ---
-const Card: FC<{ children: React.ReactNode; className?: string; onClick?: () => void; }> = ({ children, className, onClick }) => (
-    <div onClick={onClick} className={`bg-gray-800 shadow-lg rounded-xl p-4 md:p-6 ${className}`}>
-        {children}
+const Card: FC<{ children: React.ReactNode; className?: string; title?: string }> = ({ children, className, title }) => (
+  <div className={`bg-gray-800 shadow-2xl rounded-3xl p-6 border border-gray-700/50 relative overflow-hidden ${className}`}>
+    {title && <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">{title}</h4>}
+    {children}
+  </div>
+);
+
+const Button: FC<{ onClick?: () => void; children: React.ReactNode; variant?: 'primary' | 'secondary' | 'accent' | 'danger'; className?: string; disabled?: boolean; type?: 'button' | 'submit' }> = ({ onClick, children, variant = 'primary', className, disabled, type = 'button' }) => {
+  const styles = {
+    primary: "bg-brand-primary hover:bg-brand-dark text-white shadow-lg shadow-brand-primary/20",
+    secondary: "bg-gray-700 hover:bg-gray-600 text-gray-200",
+    accent: "bg-brand-secondary hover:bg-brand-primary text-gray-900 font-black shadow-lg shadow-brand-secondary/20",
+    danger: "bg-red-600 hover:bg-red-700 text-white"
+  };
+  return (
+    <button type={type} onClick={onClick} disabled={disabled} className={`px-5 py-3 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest ${styles[variant]} ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+      {children}
+    </button>
+  );
+};
+
+// --- FEATURE COMPONENTS ---
+
+const PredictorIntelligence: FC<{ athlete: Athlete }> = ({ athlete }) => {
+  const metrics = useMemo(() => calculateAdvancedMetrics(athlete.workouts), [athlete.workouts]);
+  const acwr = useMemo(() => calculateACWR(athlete.workouts), [athlete.workouts]);
+  const readiness = athlete.wellness[0]?.readinessScore || 0;
+
+  const isAtRisk = metrics.monotony > 2.0 || acwr.ratio > 1.5 || (readiness < 60 && acwr.ratio > 1.2);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Card className={`border-b-4 ${metrics.monotony > 2.0 ? 'border-red-500' : 'border-brand-primary'}`} title="Monotonia (Foster)">
+        <p className={`text-3xl font-black mt-1 ${metrics.monotony > 2.0 ? 'text-red-500' : 'text-white'}`}>{metrics.monotony}</p>
+        <p className="text-[9px] text-gray-500 mt-2 font-bold italic">Ideal: {"< 2.0"}</p>
+      </Card>
+      
+      <Card className={`border-b-4 ${acwr.status === 'danger' ? 'border-red-500' : 'border-brand-primary'}`} title="ACWR (Carga Interna)">
+        <p className={`text-3xl font-black mt-1 ${acwr.status === 'danger' ? 'text-red-500' : 'text-white'}`}>{acwr.ratio}</p>
+        <p className="text-[9px] text-gray-500 mt-2 font-bold italic">Sweet Spot: 0.8 - 1.3</p>
+      </Card>
+
+      <Card className={`border-b-4 ${isAtRisk ? 'border-red-500 bg-red-500/5' : 'border-brand-secondary'}`} title="Predição de Lesão">
+        <p className={`text-lg font-black mt-1 uppercase ${isAtRisk ? 'text-red-500' : 'text-brand-secondary'}`}>
+          {isAtRisk ? 'Risco Elevado' : 'Estável'}
+        </p>
+        <p className="text-[9px] text-gray-500 mt-2 font-bold italic">{isAtRisk ? 'Ajustar carga para evitar fadiga.' : 'Liberado para performance.'}</p>
+      </Card>
     </div>
-);
-
-
-const Button: FC<{ onClick?: () => void; children: React.ReactNode; className?: string, variant?: 'primary' | 'secondary', type?: 'button' | 'submit' }> = ({ onClick, children, className, variant = 'primary', type = 'button' }) => {
-    const baseClasses = "px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 no-print";
-    const variantClasses = variant === 'primary' 
-        ? "bg-brand-primary hover:bg-brand-dark text-white shadow-md hover:shadow-lg" 
-        : "bg-gray-600 hover:bg-gray-500 text-gray-100";
-    return <button onClick={onClick} type={type} className={`${baseClasses} ${variantClasses} ${className}`}>{children}</button>;
+  );
 };
 
-// --- ANATOMY SVG ---
-const Anatomy: FC<{ highlightedMuscles: ('quadricepsR' | 'quadricepsL' | 'hamstringsR' | 'hamstringsL')[] }> = ({ highlightedMuscles }) => {
-    const isHighlighted = (muscle: string) => highlightedMuscles.includes(muscle as any);
-    const highlightClass = "fill-accent-red opacity-80";
-    const baseBodyClass = "fill-gray-700";
-    const baseMuscleClass = "fill-gray-600";
-    const glowFilter = (
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-            <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-        </filter>
+const AssessmentComparison: FC<{ athlete: Athlete }> = ({ athlete }) => {
+  const [selectedType, setSelectedType] = useState<AssessmentType>('isometricStrength');
+
+  const chartData = useMemo(() => {
+    const list = (athlete.assessments[selectedType] as any[]) || [];
+    return list.slice().reverse().map(item => ({
+      date: formatDate(item.date).split('/')[0] + '/' + formatDate(item.date).split('/')[1],
+      ...item
+    }));
+  }, [athlete, selectedType]);
+
+  const renderComparativeChart = () => {
+    if (chartData.length === 0) return (
+      <div className="h-[300px] flex items-center justify-center text-gray-600 text-[10px] font-black uppercase tracking-widest italic">
+        Aguardando Dados
+      </div>
     );
 
-    const AnteriorFigure = () => (
-        <svg viewBox="0 0 200 400" className="w-full h-auto max-w-[150px]">
-            <defs>{glowFilter}</defs>
-            <g className={baseBodyClass}>
-                {/* Head */}
-                <path d="M100 5 C115 5 125 15 125 30 S115 55 100 55 S75 45 75 30 S85 5 100 5 Z"/>
-                {/* Torso */}
-                <path d="M100 60 C130 60 140 90 140 120 L135 180 C135 185 130 190 120 190 L80 190 C70 190 65 185 65 180 L60 120 C60 90 70 60 100 60 Z"/>
-                {/* Arms */}
-                <path d="M140 100 L150 120 L165 220 L155 225 L140 130 Z"/>
-                <path d="M60 100 L50 120 L35 220 L45 225 L60 130 Z"/>
-                {/* Legs */}
-                <path d="M80 190 L70 250 L60 380 L75 390 L85 250 Z"/>
-                <path d="M120 190 L130 250 L140 380 L125 390 L115 250 Z"/>
-            </g>
-            {/* Muscles - Quads */}
-            <g style={{ filter: isHighlighted('quadricepsR') ? 'url(#glow)' : 'none' }}>
-                <path className={isHighlighted('quadricepsR') ? highlightClass : baseMuscleClass} d="M80 192 C80 200 70 220 72 250 L85 248 C83 220 88 200 88 192 Z"/>
-            </g>
-            <g style={{ filter: isHighlighted('quadricepsL') ? 'url(#glow)' : 'none' }}>
-                <path className={isHighlighted('quadricepsL') ? highlightClass : baseMuscleClass} d="M120 192 C120 200 130 220 128 250 L115 248 C117 220 112 200 112 192 Z"/>
-            </g>
-        </svg>
-    );
-
-    const PosteriorFigure = () => (
-        <svg viewBox="0 0 200 400" className="w-full h-auto max-w-[150px]">
-            <defs>{glowFilter}</defs>
-             <g className={baseBodyClass}>
-                {/* Head */}
-                <path d="M100 5 C115 5 125 15 125 30 S115 55 100 55 S75 45 75 30 S85 5 100 5 Z"/>
-                {/* Torso */}
-                <path d="M100 60 C130 60 140 90 140 120 L135 180 C135 185 130 190 120 190 L80 190 C70 190 65 185 65 180 L60 120 C60 90 70 60 100 60 Z"/>
-                {/* Arms */}
-                <path d="M140 100 L150 120 L165 220 L155 225 L140 130 Z"/>
-                <path d="M60 100 L50 120 L35 220 L45 225 L60 130 Z"/>
-                {/* Legs */}
-                <path d="M80 190 L70 250 L60 380 L75 390 L85 250 Z"/>
-                <path d="M120 190 L130 250 L140 380 L125 390 L115 250 Z"/>
-            </g>
-            {/* Muscles - Hamstrings */}
-            <g style={{ filter: isHighlighted('hamstringsL') ? 'url(#glow)' : 'none' }}>
-                <path className={isHighlighted('hamstringsL') ? highlightClass : baseMuscleClass} d="M82 192 C85 210 85 230 82 250 L72 250 C75 230 75 210 72 192 Z"/>
-            </g>
-             <g style={{ filter: isHighlighted('hamstringsR') ? 'url(#glow)' : 'none' }}>
-                <path className={isHighlighted('hamstringsR') ? highlightClass : baseMuscleClass} d="M118 192 C115 210 115 230 118 250 L128 250 C125 230 125 210 128 192 Z"/>
-            </g>
-        </svg>
-    );
-
-    return (
-        <div className="flex justify-around items-start">
-            <div className="text-center px-2">
-                <div className="relative">
-                    <AnteriorFigure />
-                    <p className="absolute top-0 left-[35%] -translate-x-1/2 font-bold text-lg text-gray-400">D</p>
-                    <p className="absolute top-0 right-[35%] translate-x-1/2 font-bold text-lg text-gray-400">E</p>
-                </div>
-                <p className="text-sm font-semibold text-gray-400 mt-2">Vista Anterior</p>
-                <p className="text-xs text-gray-500">(Quadríceps)</p>
-            </div>
-            <div className="text-center px-2">
-                 <div className="relative">
-                    <PosteriorFigure />
-                    <p className="absolute top-0 left-[35%] -translate-x-1/2 font-bold text-lg text-gray-400">E</p>
-                    <p className="absolute top-0 right-[35%] translate-x-1/2 font-bold text-lg text-gray-400">D</p>
-                </div>
-                <p className="text-sm font-semibold text-gray-400 mt-2">Vista Posterior</p>
-                <p className="text-xs text-gray-500">(Isquiotibiais)</p>
-            </div>
-        </div>
-    );
-};
-
-
-// --- ASSESSMENT COMPONENTS ---
-
-const AssessmentSection: FC<{ title: string; children: React.ReactNode; onAdd: () => void; onExportPDF: () => void; isReadOnly?: boolean }> = ({ title, children, onAdd, onExportPDF, isReadOnly }) => (
-    <Card className="flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-brand-light">{title}</h3>
-            <div className="flex items-center gap-2">
-                 {!isReadOnly && (
-                    <Button onClick={onAdd} variant="secondary" className="!px-3">
-                        <PlusIcon className="w-5 h-5" />
-                    </Button>
-                )}
-                <Button onClick={onExportPDF} variant="secondary" className="!px-3">
-                    <PDFIcon className="w-5 h-5" />
-                    <span className="hidden sm:inline">Exportar PDF</span>
-                </Button>
-            </div>
-        </div>
-        <div className="flex-grow">{children}</div>
-    </Card>
-);
-
-const NoData: FC<{ message?: string }> = ({ message = "Nenhuma avaliação encontrada." }) => (
-    <div className="flex items-center justify-center h-full text-gray-500 min-h-[200px]">
-        <p>{message}</p>
-    </div>
-);
-
-// --- Form Components ---
-const Input: FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
-    <input {...props} className={`bg-gray-800 p-2 rounded ${props.className}`} />
-);
-const Textarea: FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (props) => (
-    <textarea {...props} className={`bg-gray-800 p-2 rounded w-full ${props.className}`} />
-);
-const Select: FC<React.SelectHTMLAttributes<HTMLSelectElement>> = (props) => (
-    <select {...props} className={`bg-gray-800 p-2 rounded w-full ${props.className}`} />
-);
-
-const AddAssessmentModal: FC<{ title: string; children: React.ReactNode; onCancel: () => void; onSubmit: (e: React.FormEvent) => void }> = ({ title, children, onCancel, onSubmit }) => (
-    <form onSubmit={onSubmit} className="space-y-4 p-4 bg-gray-700 rounded-lg">
-        <h4 className="text-lg font-semibold text-white">{title}</h4>
-        {children}
-        <div className="flex justify-end gap-2">
-            <Button onClick={onCancel} variant="secondary" type="button">Cancelar</Button>
-            <Button type="submit">Salvar</Button>
-        </div>
-    </form>
-);
-
-const BioimpedanceForm: FC<{ onAdd: (data: Omit<Bioimpedance, 'id'>) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
-    const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], weight: '', fatPercentage: '', muscleMass: '', visceralFat: '', hydration: '', observations: '' });
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
-    
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const numericData = {
-            weight: parseFloat(formData.weight),
-            fatPercentage: parseFloat(formData.fatPercentage),
-            muscleMass: parseFloat(formData.muscleMass),
-            visceralFat: parseInt(formData.visceralFat),
-            hydration: parseFloat(formData.hydration),
-        };
-        if (Object.values(numericData).some(isNaN) || !formData.date) {
-            toast.error("Por favor, preencha todos os campos com valores válidos, incluindo a data.");
-            return;
-        }
-        onAdd({date: formData.date, ...numericData, observations: formData.observations });
-    };
-
-    return (
-        <AddAssessmentModal title="Nova Avaliação de Bioimpedância" onCancel={onCancel} onSubmit={handleSubmit}>
-             <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Data da Avaliação</label>
-                    <Input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <Input type="number" step="any" name="weight" placeholder="Peso (kg)" value={formData.weight} onChange={handleChange} />
-                    <Input type="number" step="any" name="fatPercentage" placeholder="% Gordura" value={formData.fatPercentage} onChange={handleChange} />
-                    <Input type="number" step="any" name="muscleMass" placeholder="Massa Muscular (kg)" value={formData.muscleMass} onChange={handleChange} />
-                    <Input type="number" step="any" name="visceralFat" placeholder="Gordura Visceral" value={formData.visceralFat} onChange={handleChange} />
-                    <Input type="number" step="any" name="hydration" placeholder="Hidratação (%)" value={formData.hydration} onChange={handleChange} />
-                </div>
-                <Textarea name="observations" placeholder="Observações e recomendações..." value={formData.observations} onChange={handleChange} rows={3} />
-            </div>
-        </AddAssessmentModal>
-    );
-};
-
-const IsometricStrengthForm: FC<{ onAdd: (data: Omit<IsometricStrength, 'id'>) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
-    const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], quadricepsR: '', quadricepsL: '', hamstringsR: '', hamstringsL: '', observations: '' });
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
-    
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const numericData = {
-            quadricepsR: parseFloat(formData.quadricepsR),
-            quadricepsL: parseFloat(formData.quadricepsL),
-            hamstringsR: parseFloat(formData.hamstringsR),
-            hamstringsL: parseFloat(formData.hamstringsL),
-        };
-         if (Object.values(numericData).some(isNaN) || !formData.date) {
-            toast.error("Por favor, preencha todos os campos com valores válidos, incluindo a data.");
-            return;
-        }
-        onAdd({ date: formData.date, ...numericData, observations: formData.observations });
-    };
-    return (
-        <AddAssessmentModal title="Nova Avaliação de Força Isométrica" onCancel={onCancel} onSubmit={handleSubmit}>
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Data da Avaliação</label>
-                    <Input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                     <Input type="number" step="any" name="quadricepsR" placeholder="Quadríceps D (kgf)" value={formData.quadricepsR} onChange={handleChange} />
-                     <Input type="number" step="any" name="quadricepsL" placeholder="Quadríceps E (kgf)" value={formData.quadricepsL} onChange={handleChange} />
-                     <Input type="number" step="any" name="hamstringsR" placeholder="Isquiotibiais D (kgf)" value={formData.hamstringsR} onChange={handleChange} />
-                     <Input type="number" step="any" name="hamstringsL" placeholder="Isquiotibiais E (kgf)" value={formData.hamstringsL} onChange={handleChange} />
-                </div>
-                <Textarea name="observations" placeholder="Observações e recomendações..." value={formData.observations} onChange={handleChange} rows={3} />
-            </div>
-        </AddAssessmentModal>
-    );
-};
-
-const CMJForm: FC<{ onAdd: (data: Omit<Cmj, 'id'>) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
-    const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], height: '', power: '', depth: '', unilateralJumpR: '', unilateralJumpL: '', load: '', observations: '' });
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
-    
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const { date, observations, ...rest} = formData;
-        const numericData = {
-            height: parseFloat(rest.height),
-            power: parseFloat(rest.power),
-            depth: parseFloat(rest.depth),
-            unilateralJumpR: rest.unilateralJumpR ? parseFloat(rest.unilateralJumpR) : undefined,
-            unilateralJumpL: rest.unilateralJumpL ? parseFloat(rest.unilateralJumpL) : undefined,
-            load: rest.load ? parseFloat(rest.load) : undefined,
-        };
-        if (isNaN(numericData.height) || isNaN(numericData.power) || isNaN(numericData.depth) || !date) {
-            toast.error("Por favor, preencha os campos obrigatórios (Data, Altura, Potência, Profundidade).");
-            return;
-        }
-        onAdd({ date, ...numericData, observations } as Omit<Cmj, 'id'>);
-    };
-
-    return (
-        <AddAssessmentModal title="Nova Avaliação de CMJ" onCancel={onCancel} onSubmit={handleSubmit}>
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Data da Avaliação</label>
-                    <Input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <Input type="number" step="any" name="height" placeholder="Altura do Salto (cm)" value={formData.height} onChange={handleChange} required />
-                    <Input type="number" step="any" name="depth" placeholder="Profundidade (cm)" value={formData.depth} onChange={handleChange} required />
-                    <Input type="number" step="any" name="power" placeholder="Potência (W)" value={formData.power} onChange={handleChange} required />
-                    <Input type="number" step="any" name="load" placeholder="Carga (kg)" value={formData.load} onChange={handleChange} />
-                    <Input type="number" step="any" name="unilateralJumpR" placeholder="Salto Uni. Direito (cm)" value={formData.unilateralJumpR} onChange={handleChange} />
-                    <Input type="number" step="any" name="unilateralJumpL" placeholder="Salto Uni. Esquerdo (cm)" value={formData.unilateralJumpL} onChange={handleChange} />
-                </div>
-                 <Textarea name="observations" placeholder="Observações e recomendações..." value={formData.observations} onChange={handleChange} rows={3} />
-            </div>
-        </AddAssessmentModal>
-    );
-};
-
-const GeneralStrengthForm: FC<{ onAdd: (data: Omit<GeneralStrength, 'id'>) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
-    const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], exercise: GeneralStrengthExercise.HALF_SQUAT, load: '', observations: '' });
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const data = {
-            date: formData.date,
-            exercise: formData.exercise,
-            load: parseFloat(formData.load),
-            observations: formData.observations,
-        };
-        if (isNaN(data.load) || !data.date) {
-            toast.error("Por favor, insira uma data e carga válidas.");
-            return;
-        }
-        onAdd(data);
-    };
-
-    return (
-        <AddAssessmentModal title="Nova Avaliação de Força Geral" onCancel={onCancel} onSubmit={handleSubmit}>
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Data da Avaliação</label>
-                    <Input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <Select name="exercise" value={formData.exercise} onChange={handleChange}>
-                        {Object.values(GeneralStrengthExercise).map(ex => <option key={ex} value={ex}>{ex}</option>)}
-                    </Select>
-                    <Input type="number" step="any" name="load" placeholder="Carga (kg)" value={formData.load} onChange={handleChange} />
-                </div>
-                <Textarea name="observations" placeholder="Observações e recomendações..." value={formData.observations} onChange={handleChange} rows={3} />
-            </div>
-        </AddAssessmentModal>
-    );
-};
-
-const VO2MaxForm: FC<{ onAdd: (data: Omit<Vo2max, 'id'>) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
-    const [formData, setFormData] = useState({
-        date: new Date().toISOString().split('T')[0],
-        vo2max: '', maxHeartRate: '', thresholdHeartRate: '', maxVentilation: '',
-        thresholdVentilation: '', maxLoad: '', thresholdLoad: '', vam: '',
-        rec10s: '', rec30s: '', rec60s: '', score: '', observations: ''
-    });
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const { observations, date, ...rest } = formData;
-        const numericData = Object.fromEntries(
-            Object.entries(rest).map(([key, value]) => [key, parseFloat(value as string)])
+    switch(selectedType) {
+      case 'bioimpedance':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <XAxis dataKey="date" tick={{fill: '#4b5563', fontSize: 10}} />
+              <YAxis tick={{fill: '#4b5563', fontSize: 10}} />
+              <Tooltip contentStyle={{backgroundColor: '#111827', border: 'none', borderRadius: '12px'}} />
+              <Legend verticalAlign="top" height={36}/>
+              <Line name="Peso (kg)" type="monotone" dataKey="weight" stroke="#fff" strokeWidth={3} dot={{fill: '#fff'}} />
+              <Line name="Gordura (%)" type="monotone" dataKey="fatPercentage" stroke="#E53E3E" strokeWidth={2} dot={{fill: '#E53E3E'}} />
+              <Line name="Massa Magra (kg)" type="monotone" dataKey="muscleMass" stroke="#63BFAA" strokeWidth={2} dot={{fill: '#63BFAA'}} />
+              <Line name="Hidratação (%)" type="monotone" dataKey="hydration" stroke="#3182ce" strokeWidth={2} dot={{fill: '#3182ce'}} />
+            </LineChart>
+          </ResponsiveContainer>
         );
-        if (Object.values(numericData).some(isNaN) || !date) {
-            toast.error("Por favor, preencha todos os campos com valores válidos, incluindo a data.");
-            return;
-        }
-        onAdd({ date, ...numericData, observations } as Omit<Vo2max, 'id'>);
-    };
-
-    return (
-        <AddAssessmentModal title="Nova Avaliação de VO₂ máx" onCancel={onCancel} onSubmit={handleSubmit}>
-             <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-1">Data da Avaliação</label>
-                    <Input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full" />
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <Input type="number" step="any" name="vo2max" placeholder="VO₂ máx (ml/kg*min)" value={formData.vo2max} onChange={handleChange} />
-                    <Input type="number" step="any" name="vam" placeholder="VAM (km/h)" value={formData.vam} onChange={handleChange} />
-                    <Input type="number" step="any" name="maxHeartRate" placeholder="FC Máx (bpm)" value={formData.maxHeartRate} onChange={handleChange} />
-                    <Input type="number" step="any" name="thresholdHeartRate" placeholder="FC Limiar (bpm)" value={formData.thresholdHeartRate} onChange={handleChange} />
-                    <Input type="number" step="any" name="maxLoad" placeholder="Carga Máx (km/h)" value={formData.maxLoad} onChange={handleChange} />
-                    <Input type="number" step="any" name="thresholdLoad" placeholder="Carga Limiar (km/h)" value={formData.thresholdLoad} onChange={handleChange} />
-                    <Input type="number" step="any" name="maxVentilation" placeholder="Vent. Máx (l/min)" value={formData.maxVentilation} onChange={handleChange} />
-                    <Input type="number" step="any" name="thresholdVentilation" placeholder="Vent. Limiar (l/min)" value={formData.thresholdVentilation} onChange={handleChange} />
-                    <Input type="number" step="any" name="rec10s" placeholder="Rec 10s (bpm)" value={formData.rec10s} onChange={handleChange} />
-                    <Input type="number" step="any" name="rec30s" placeholder="Rec 30s (bpm)" value={formData.rec30s} onChange={handleChange} />
-                    <Input type="number" step="any" name="rec60s" placeholder="Rec 60s (bpm)" value={formData.rec60s} onChange={handleChange} />
-                    <Input type="number" step="any" name="score" placeholder="Score (0-100)" value={formData.score} onChange={handleChange} />
-                </div>
-                <Textarea name="observations" placeholder="Observações e recomendações..." value={formData.observations} onChange={handleChange} rows={3} />
-            </div>
-        </AddAssessmentModal>
-    );
-};
-
-// --- VIEW Components ---
-const BioimpedanceView: FC<{ assessments: Bioimpedance[], isPrinting?: boolean }> = ({ assessments, isPrinting }) => {
-    const latest = assessments[0];
-
-    const evolutionData = useMemo(() => {
-        if (!assessments || assessments.length === 0) return [];
-        return [...assessments]
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .map(a => ({
-                date: formatDate(a.date),
-                weight: a.weight,
-                muscleMass: a.muscleMass,
-                fatMass: parseFloat((a.weight * (a.fatPercentage / 100)).toFixed(2)),
-            }));
-    }, [assessments]);
-
-    if (!latest) return <NoData />;
-
-    const latestFatMass = latest.weight * (latest.fatPercentage / 100);
-
-    return (
-        <div className="space-y-6">
-            <div className="text-right text-sm text-gray-400">Última avaliação: {formatDate(latest.date)}</div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
-                <div className="bg-gray-700/50 p-3 rounded-lg">
-                    <p className="text-sm text-brand-light">Peso Total</p>
-                    <p className="text-2xl font-bold text-white">{latest.weight.toFixed(1)} <span className="text-base font-normal">kg</span></p>
-                </div>
-                <div className="bg-gray-700/50 p-3 rounded-lg">
-                    <p className="text-sm text-brand-light">Massa Muscular</p>
-                    <p className="text-2xl font-bold text-white">{latest.muscleMass.toFixed(1)} <span className="text-base font-normal">kg</span></p>
-                </div>
-                <div className="bg-gray-700/50 p-3 rounded-lg">
-                    <p className="text-sm text-brand-light">% Gordura</p>
-                    <p className="text-2xl font-bold text-white">{latest.fatPercentage.toFixed(1)}<span className="text-base font-normal">%</span></p>
-                </div>
-                <div className="bg-gray-700/50 p-3 rounded-lg">
-                    <p className="text-sm text-brand-light">Massa Gorda</p>
-                    <p className="text-2xl font-bold text-white">{latestFatMass.toFixed(1)} <span className="text-base font-normal">kg</span></p>
-                </div>
-                <div className="bg-gray-700/50 p-3 rounded-lg">
-                    <p className="text-sm text-brand-light">Gordura Visceral</p>
-                    <p className="text-2xl font-bold text-white">{latest.visceralFat}</p>
-                </div>
-                <div className="bg-gray-700/50 p-3 rounded-lg">
-                    <p className="text-sm text-brand-light">Hidratação</p>
-                    <p className="text-2xl font-bold text-white">{latest.hydration.toFixed(1)}<span className="text-base font-normal">%</span></p>
-                </div>
-            </div>
-
-            <div>
-                <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Composição Corporal (kg)</h4>
-                <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <defs>
-                            <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                                <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                            </linearGradient>
-                            <linearGradient id="colorMuscle" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                                <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
-                            </linearGradient>
-                            <linearGradient id="colorFat" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#ffc658" stopOpacity={0.8}/>
-                                <stop offset="95%" stopColor="#ffc658" stopOpacity={0}/>
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                        <XAxis dataKey="date" stroke="#9CA3AF"/>
-                        <YAxis stroke="#9CA3AF" label={{ value: 'Massa (kg)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
-                        <Legend />
-                        <Area type="monotone" dataKey="weight" name="Peso Total" stroke="#8884d8" fillOpacity={1} fill="url(#colorWeight)" />
-                        <Area type="monotone" dataKey="muscleMass" name="Massa Muscular" stroke="#82ca9d" fillOpacity={1} fill="url(#colorMuscle)" />
-                        <Area type="monotone" dataKey="fatMass" name="Massa Gorda" stroke="#ffc658" fillOpacity={1} fill="url(#colorFat)" />
-                    </AreaChart>
-                </ResponsiveContainer>
-            </div>
-            
-            {latest.observations && (
-                <div className="mt-6">
-                    <h4 className="font-semibold text-brand-light mb-2">Observações do Avaliador</h4>
-                    <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
-                </div>
-            )}
-        </div>
-    );
-};
-
-const IsometricStrengthView: FC<{ assessments: IsometricStrength[], isPrinting?: boolean }> = ({ assessments, isPrinting }) => {
-    const latest = assessments[0];
-    const [highlightedMuscles, setHighlightedMuscles] = useState<('quadricepsR' | 'quadricepsL' | 'hamstringsR' | 'hamstringsL')[]>([]);
-
-    const evolutionData = useMemo(() => {
-        if (assessments.length < 2) return [];
-        return [...assessments]
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .map(a => ({
-                date: formatDate(a.date),
-                quadriceps: (a.quadricepsR + a.quadricepsL) / 2,
-                hamstrings: (a.hamstringsR + a.hamstringsL) / 2,
-            }));
-    }, [assessments]);
-
-    const iqEvolutionData = useMemo(() => {
-        if (assessments.length < 2) return [];
-        return [...assessments]
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .map(a => {
-                const ratios = calculateIQRatios(a.quadricepsR, a.quadricepsL, a.hamstringsR, a.hamstringsL);
-                return {
-                    date: formatDate(a.date),
-                    right: ratios.right.ratio,
-                    left: ratios.left.ratio,
-                };
-            });
-    }, [assessments]);
-
-    if (!latest) return <NoData />;
-
-    const { right, left } = calculateIQRatios(latest.quadricepsR, latest.quadricepsL, latest.hamstringsR, latest.hamstringsL);
-    
-    const calculateAsymmetry = (valR: number, valL: number): number => {
-        if (valR === 0 && valL === 0) return 0;
-        const maxVal = Math.max(valR, valL);
-        if (maxVal === 0) return 0;
-        return (Math.abs(valR - valL) / maxVal) * 100;
-    };
-
-    const quadricepsAsymmetry = calculateAsymmetry(latest.quadricepsR, latest.quadricepsL);
-    const hamstringsAsymmetry = calculateAsymmetry(latest.hamstringsR, latest.hamstringsL);
-
-    const getAsymmetryStatus = (asymmetry: number): { color: string; label: string } => {
-        if (asymmetry <= 10) {
-            return { color: 'text-accent-green', label: 'Aceitável' };
-        } else if (asymmetry > 10 && asymmetry <= 15) {
-            return { color: 'text-yellow-400', label: 'Atenção' };
-        } else {
-            return { color: 'text-accent-red', label: 'Risco Alto para Lesões' };
-        }
-    };
-
-    const quadStatus = getAsymmetryStatus(quadricepsAsymmetry);
-    const hamStatus = getAsymmetryStatus(hamstringsAsymmetry);
-
-
-    return (
-         <div className="space-y-8">
-             <div className="text-right text-sm text-gray-400">Última avaliação: {formatDate(latest.date)}</div>
-             <div className="grid md:grid-cols-2 gap-6 items-center">
-                <div className="space-y-4">
-                    <div 
-                        onMouseEnter={() => setHighlightedMuscles(['quadricepsL', 'hamstringsL'])} 
-                        onMouseLeave={() => setHighlightedMuscles([])} 
-                        className="p-3 rounded-lg bg-gray-700/50"
-                    >
-                        <h4 className="font-bold text-lg text-brand-light text-center">Perna Esquerda</h4>
-                        <p>Quadríceps: <span className="font-bold text-white">{latest.quadricepsL.toFixed(2)} kgf</span></p>
-                        <p>Isquiotibiais: <span className="font-bold text-white">{latest.hamstringsL.toFixed(2)} kgf</span></p>
-                        <p>Razão I/Q: <span className={`font-bold ${left.status === 'good' ? 'text-accent-green' : 'text-accent-red'}`}>{left.ratio}%</span></p>
-                    </div>
-                     <div 
-                        onMouseEnter={() => setHighlightedMuscles(['quadricepsR', 'hamstringsR'])} 
-                        onMouseLeave={() => setHighlightedMuscles([])} 
-                        className="p-3 rounded-lg bg-gray-700/50"
-                    >
-                        <h4 className="font-bold text-lg text-brand-light text-center">Perna Direita</h4>
-                        <p>Quadríceps: <span className="font-bold text-white">{latest.quadricepsR.toFixed(2)} kgf</span></p>
-                        <p>Isquiotibiais: <span className="font-bold text-white">{latest.hamstringsR.toFixed(2)} kgf</span></p>
-                        <p>Razão I/Q: <span className={`font-bold ${right.status === 'good' ? 'text-accent-green' : 'text-accent-red'}`}>{right.ratio}%</span></p>
-                    </div>
-                    <p className="text-xs text-center text-gray-400">Razão ideal entre 50% e 60%.</p>
-                </div>
-                <div>
-                    <Anatomy highlightedMuscles={highlightedMuscles} />
-                </div>
-             </div>
-
-            <div className="mt-6">
-                <h4 className="font-bold text-lg text-brand-light text-center mb-4">Assimetria Contralateral</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
-                    <div className="bg-gray-700/50 p-3 rounded-lg">
-                        <p className="text-sm text-brand-light">Quadríceps</p>
-                        <p className={`text-2xl font-bold ${quadStatus.color}`}>{quadricepsAsymmetry.toFixed(1)}<span className="text-base font-normal">%</span></p>
-                        <p className={`text-xs font-semibold ${quadStatus.color}`}>{quadStatus.label}</p>
-                    </div>
-                    <div className="bg-gray-700/50 p-3 rounded-lg">
-                        <p className="text-sm text-brand-light">Isquiotibiais</p>
-                        <p className={`text-2xl font-bold ${hamStatus.color}`}>{hamstringsAsymmetry.toFixed(1)}<span className="text-base font-normal">%</span></p>
-                        <p className={`text-xs font-semibold ${hamStatus.color}`}>{hamStatus.label}</p>
-                    </div>
-                </div>
-                <p className="text-xs text-center text-gray-400 mt-2">Valores de assimetria de até 10% são considerados aceitáveis.</p>
-            </div>
-            
-            {assessments.length > 1 && (
-                <>
-                    <div>
-                        <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Força (Média D/E)</h4>
-                        <ResponsiveContainer width="100%" height={250}>
-                            <LineChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                                <XAxis dataKey="date" stroke="#9CA3AF"/>
-                                <YAxis stroke="#9CA3AF" label={{ value: 'Força (kgf)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }} />
-                                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
-                                <Legend />
-                                <Line type="monotone" dataKey="quadriceps" name="Quadríceps" stroke="#8884d8" />
-                                <Line type="monotone" dataKey="hamstrings" name="Isquiotibiais" stroke="#82ca9d" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Razão I/Q (%)</h4>
-                        <ResponsiveContainer width="100%" height={250}>
-                             <LineChart data={iqEvolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                                <XAxis dataKey="date" stroke="#9CA3AF"/>
-                                <YAxis stroke="#9CA3AF" domain={[40, 70]} label={{ value: 'Razão (%)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }} />
-                                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
-                                <Legend />
-                                <ReferenceArea y1={50} y2={60} fill="#38A169" fillOpacity={0.2} label={{ value: 'Ideal', position: 'insideTopLeft', fill: '#A0AEC0' }}/>
-                                <Line type="monotone" dataKey="right" name="Perna Direita" stroke="#ffc658" />
-                                <Line type="monotone" dataKey="left" name="Perna Esquerda" stroke="#E53E3E" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </>
-            )}
-
-             {latest.observations && (
-                <div className="mt-6">
-                    <h4 className="font-semibold text-brand-light mb-2">Observações do Avaliador</h4>
-                    <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
-                </div>
-            )}
-         </div>
-    );
-};
-
-const GeneralStrengthView: FC<{ assessments: GeneralStrength[], isPrinting?: boolean }> = ({ assessments, isPrinting }) => {
-    const latest = assessments[0];
-    const { latestByExercise, evolutionData } = useMemo(() => {
-        if (assessments.length === 0) return { latestByExercise: [], evolutionData: [] };
-
-        // FIX: Explicitly type the accumulator in the reduce function to prevent potential type inference issues.
-        const grouped = assessments.reduce((acc: Record<string, GeneralStrength[]>, a) => {
-            if (!acc[a.exercise]) {
-                acc[a.exercise] = [];
-            }
-            acc[a.exercise].push(a);
-            return acc;
-        }, {} as Record<GeneralStrengthExercise, GeneralStrength[]>);
-
-        const latestByExercise = Object.values(GeneralStrengthExercise).map(ex => {
-            return grouped[ex]?.[0];
-        }).filter(Boolean) as GeneralStrength[];
-
-        // FIX: Explicitly typed the sort callback parameters 'a' and 'b' as strings to fix type inference issue.
-        const dates = Array.from(new Set(assessments.map(a => a.date))).sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
-        const evolutionData = dates.map(date => {
-            const entry: { [key: string]: any } = { date: formatDate(date) };
-            for (const ex of Object.values(GeneralStrengthExercise)) {
-                const assessmentForDate = assessments.find(a => a.date === date && a.exercise === ex);
-                entry[ex] = assessmentForDate ? assessmentForDate.load : null;
-            }
-            return entry;
-        });
-
-        return { latestByExercise, evolutionData };
-    }, [assessments]);
-
-    if (assessments.length === 0) return <NoData />;
-
-    const colors = {
-        [GeneralStrengthExercise.HALF_SQUAT]: "#8884d8",
-        [GeneralStrengthExercise.BENCH_PRESS]: "#82ca9d",
-        [GeneralStrengthExercise.ROW]: "#ffc658",
-    };
-
-    return (
-        <div className="space-y-6">
-            <div>
-                <h4 className="font-semibold text-center mb-4 text-brand-light">Cargas Atuais</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                    {latestByExercise.length > 0 ? latestByExercise.map(a => (
-                        <div key={a.id} className="bg-gray-700/50 p-3 rounded-lg">
-                            <p className="text-sm text-brand-light">{a.exercise}</p>
-                            <p className="text-2xl font-bold text-white">{a.load} <span className="text-base font-normal">kg</span></p>
-                            <p className="text-xs text-gray-500">{formatDate(a.date)}</p>
-                        </div>
-                    )) : <p className="text-gray-500 col-span-3">Nenhum dado recente.</p>}
-                </div>
-            </div>
-             <div>
-                <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução da Força (kg)</h4>
-                <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                        <XAxis dataKey="date" stroke="#9CA3AF"/>
-                        <YAxis stroke="#9CA3AF" label={{ value: 'Carga (kg)', angle: -90, position: 'insideLeft', fill: '#9CA3AF' }} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
-                        <Legend />
-                        {Object.values(GeneralStrengthExercise).map(ex => (
-                             <Line key={ex} type="monotone" dataKey={ex} stroke={colors[ex]} connectNulls />
-                        ))}
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
-            {latest?.observations && (
-                <div className="mt-6">
-                    <h4 className="font-semibold text-brand-light mb-2">Observações da Última Avaliação</h4>
-                    <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
-                </div>
-            )}
-        </div>
-    );
-};
-
-const CMJView: FC<{ assessments: Cmj[], isPrinting?: boolean }> = ({ assessments, isPrinting }) => {
-    const latest = assessments[0];
-    if (!latest) return <NoData />;
-
-    const flightTime = latest.height > 0 ? 2 * Math.sqrt(2 * (latest.height / 100) / 9.81) * 1000 : 0;
-    const rsi = latest.depth > 0 ? latest.height / latest.depth : 0;
-    
-    const unilateralAsymmetry = (latest.unilateralJumpR && latest.unilateralJumpL && latest.unilateralJumpR > 0 && latest.unilateralJumpL > 0)
-        ? (Math.abs(latest.unilateralJumpR - latest.unilateralJumpL) / Math.max(latest.unilateralJumpR, latest.unilateralJumpL)) * 100
-        : null;
-
-    const evolutionData = useMemo(() => {
-        if (!assessments || assessments.length < 2) return [];
-        return [...assessments]
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .map(a => ({
-                date: formatDate(a.date),
-                height: a.height,
-                power: a.power,
-            }));
-    }, [assessments]);
-
-    return (
-         <div className="space-y-4">
-            <div className="text-right text-sm text-gray-400">Última avaliação: {formatDate(latest.date)}</div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div className="bg-gray-700/50 p-3 rounded">
-                    <p className="text-sm text-brand-light">Altura do Salto</p>
-                    <p className="text-2xl font-bold text-white">{latest.height.toFixed(2)} <span className="text-base font-normal">cm</span></p>
-                </div>
-                <div className="bg-gray-700/50 p-3 rounded">
-                    <p className="text-sm text-brand-light">Profundidade</p>
-                    <p className="text-2xl font-bold text-white">{latest.depth.toFixed(2)} <span className="text-base font-normal">cm</span></p>
-                </div>
-                <div className="bg-gray-700/50 p-3 rounded">
-                    <p className="text-sm text-brand-light">Potência</p>
-                    <p className="text-2xl font-bold text-white">{latest.power} <span className="text-base font-normal">W</span></p>
-                </div>
-                <div className="bg-gray-700/50 p-3 rounded">
-                    <p className="text-sm text-brand-light">Tempo de Voo</p>
-                    <p className="text-2xl font-bold text-white">{flightTime.toFixed(0)} <span className="text-base font-normal">ms</span></p>
-                </div>
-                 <div className="bg-gray-700/50 p-3 rounded">
-                    <p className="text-sm text-brand-light">RSI (Modificado)</p>
-                    <p className="text-2xl font-bold text-white">{rsi.toFixed(2)}</p>
-                </div>
-                {typeof latest.load === 'number' && (
-                     <div className="bg-gray-700/50 p-3 rounded">
-                        <p className="text-sm text-brand-light">Carga Externa</p>
-                        <p className="text-2xl font-bold text-white">{latest.load} <span className="text-base font-normal">kg</span></p>
-                    </div>
-                )}
-                {typeof latest.unilateralJumpR === 'number' && (
-                    <div className="bg-gray-700/50 p-3 rounded">
-                        <p className="text-sm text-brand-light">Salto Uni. Direito</p>
-                        <p className="text-2xl font-bold text-white">{latest.unilateralJumpR.toFixed(2)} <span className="text-base font-normal">cm</span></p>
-                    </div>
-                )}
-                {typeof latest.unilateralJumpL === 'number' && (
-                    <div className="bg-gray-700/50 p-3 rounded">
-                        <p className="text-sm text-brand-light">Salto Uni. Esquerdo</p>
-                        <p className="text-2xl font-bold text-white">{latest.unilateralJumpL.toFixed(2)} <span className="text-base font-normal">cm</span></p>
-                    </div>
-                )}
-                {unilateralAsymmetry !== null && (
-                    <div className="bg-gray-700/50 p-3 rounded">
-                        <p className="text-sm text-brand-light">Assimetria Unilateral</p>
-                        <p className={`text-2xl font-bold ${unilateralAsymmetry > 15 ? 'text-accent-red' : 'text-accent-green'}`}>{unilateralAsymmetry.toFixed(1)}<span className="text-base font-normal">%</span></p>
-                    </div>
-                )}
-            </div>
-            {assessments.length > 1 && (
-                <div className="mt-8">
-                    <h4 className="font-semibold text-center mb-4 text-brand-light">Evolução do Salto</h4>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <AreaChart data={evolutionData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="colorHeight" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#63BFAA" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="#63BFAA" stopOpacity={0}/>
-                                </linearGradient>
-                                <linearGradient id="colorPower" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                            <XAxis dataKey="date" stroke="#9CA3AF"/>
-                            <YAxis yAxisId="left" stroke="#63BFAA" label={{ value: 'Altura (cm)', angle: -90, position: 'insideLeft', fill: '#63BFAA' }} />
-                            <YAxis yAxisId="right" orientation="right" stroke="#8884d8" label={{ value: 'Potência (W)', angle: -90, position: 'insideRight', fill: '#8884d8' }} />
-                            <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #4A5568' }}/>
-                            <Legend />
-                            <Area type="monotone" dataKey="height" name="Altura do Salto" stroke="#63BFAA" fillOpacity={1} fill="url(#colorHeight)" yAxisId="left" />
-                            <Area type="monotone" dataKey="power" name="Potência" stroke="#8884d8" fillOpacity={1} fill="url(#colorPower)" yAxisId="right" />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </div>
-            )}
-             {latest.observations && (
-                <div className="mt-6">
-                    <h4 className="font-semibold text-brand-light mb-2">Observações do Avaliador</h4>
-                    <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
-                </div>
-            )}
-         </div>
-    );
-};
-
-const VO2MaxView: FC<{ assessments: Vo2max[], isPrinting?: boolean }> = ({ assessments, isPrinting }) => {
-    const latest = assessments[0];
-    if (!latest) return <NoData />;
-
-    const { trainingZones, paces, vams, partialVelocities } = calculateVo2maxZones(latest);
-    const zoneColors = ["#3182CE", "#38A169", "#F6E05E", "#F56565", "#E53E3E"];
-
-    const metrics = [
-        { label: 'VO₂ Máx', value: latest.vo2max.toFixed(2), unit: 'ml/(kg*min)' },
-        { label: 'FC Máx', value: latest.maxHeartRate, unit: 'bpm' },
-        { label: 'FC Limiar', value: latest.thresholdHeartRate, unit: 'bpm' },
-        { label: 'VE Máx', value: latest.maxVentilation.toFixed(1), unit: 'l/min' },
-        { label: 'VE Limiar', value: latest.thresholdVentilation.toFixed(2), unit: 'l/min' },
-        { label: 'Carga Máx', value: latest.maxLoad, unit: 'km/h' },
-        { label: 'Carga Limiar', value: latest.thresholdLoad, unit: 'km/h' },
-        { label: 'VAM', value: latest.vam.toFixed(2), unit: 'km/h' },
-        { label: 'Rec 10s', value: latest.rec10s, unit: 'bpm' },
-        { label: 'Rec 30s', value: latest.rec30s, unit: 'bpm' },
-        { label: 'Rec 60s', value: latest.rec60s, unit: 'bpm' },
-        { label: 'Score', value: latest.score, unit: '0-100' },
-    ];
-
-    return (
-         <div className="space-y-8">
-            <div className="text-right text-sm text-gray-400">Última avaliação: {formatDate(latest.date)}</div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {metrics.map(metric => (
-                    <div key={metric.label} className="bg-gray-700/50 p-3 rounded-lg text-center">
-                        <p className="text-sm text-brand-light">{metric.label}</p>
-                        <p className="text-2xl font-bold text-white">{metric.value}</p>
-                        <p className="text-xs text-gray-400">{metric.unit}</p>
-                    </div>
-                ))}
-            </div>
-
-            <div>
-                <h4 className="font-semibold text-center mb-4 text-brand-light">Zonas de Treino (Frequência Cardíaca)</h4>
-                 <div className="w-full bg-gray-700 rounded-lg p-2">
-                    {trainingZones.map((zone, index) => (
-                        <div key={zone.name} className="flex items-center gap-4 p-1">
-                            <div className="w-20 font-semibold">{zone.name}</div>
-                            <div className="flex-grow h-6 rounded" style={{backgroundColor: zoneColors[index]}}></div>
-                            <div className="w-28 text-right text-sm">{zone.minBpm} - {zone.maxBpm} bpm</div>
-                        </div>
-                    ))}
-                 </div>
-            </div>
-            
-             <div className="grid md:grid-cols-2 gap-8">
-                <div>
-                     <h4 className="font-semibold text-center mb-4 text-brand-light">Pace por % de VAM</h4>
-                    <div className="space-y-2">
-                        {paces.map(p => (
-                             <div key={p.percentage} className="flex justify-between p-2 bg-gray-700/50 rounded-md text-sm">
-                                <span>{p.percentage}%</span>
-                                <span className="font-mono font-bold text-white">{p.pace} min/km</span>
-                             </div>
-                        ))}
-                    </div>
-                </div>
-                 <div>
-                     <h4 className="font-semibold text-center mb-4 text-brand-light">Velocidade por % de VAM</h4>
-                     <div className="space-y-2">
-                         {vams.map(v => (
-                             <div key={v.percentage} className="flex justify-between p-2 bg-gray-700/50 rounded-md text-sm">
-                                <span>{v.percentage}%</span>
-                                <span className="font-mono font-bold text-white">{v.speed} km/h</span>
-                             </div>
-                         ))}
-                     </div>
-                 </div>
-             </div>
-             <div>
-                <h4 className="font-semibold text-center mb-4 text-brand-light">Velocidades Parciais</h4>
-                <div className="space-y-4">
-                    {partialVelocities.map(dist => (
-                        <Card key={dist.distance} className="!p-2">
-                            <h5 className="font-bold text-center text-brand-secondary">{dist.distance}m</h5>
-                            <div className={isPrinting ? '' : 'overflow-x-auto'}>
-                                <table className={`w-full text-center mt-2 ${isPrinting ? 'text-[11px]' : 'text-sm'}`}>
-                                    <thead className="text-gray-400">
-                                        <tr>{dist.results.map(r => <th key={r.intensity} className="p-1 font-medium">{r.intensity}%</th>)}</tr>
-                                    </thead>
-                                    <tbody className="font-mono">
-                                        <tr className={isPrinting ? 'text-black font-bold' : 'text-white font-bold'}>{dist.results.map(r => <td key={r.intensity} className="p-1">{r.time}</td>)}</tr>
-                                        <tr className={`${isPrinting ? 'text-[9px] text-gray-600' : 'text-xs text-gray-500'}`}>{dist.results.map(r => <td key={r.intensity} className="p-1">{r.speed}km/h</td>)}</tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </Card>
-                    ))}
-                </div>
-             </div>
-             {latest.observations && (
-                <div className="mt-6">
-                    <h4 className="font-semibold text-brand-light mb-2">Observações do Avaliador</h4>
-                    <p className="text-gray-300 whitespace-pre-wrap bg-gray-700/50 p-4 rounded-lg">{latest.observations}</p>
-                </div>
-            )}
-         </div>
-    );
-};
-
-// --- ATHLETE COMPONENTS ---
-
-const AthleteForm: FC<{ onSave: (athlete: Omit<Athlete, 'id' | 'assessments'>) => void; onCancel: () => void; athlete?: Athlete }> = ({ onSave, onCancel, athlete }) => {
-    const [name, setName] = useState(athlete?.name || '');
-    const [dob, setDob] = useState(athlete?.dob || '');
-    const [injuryHistory, setInjuryHistory] = useState(athlete?.injuryHistory || '');
-    const age = useMemo(() => calculateAge(dob), [dob]);
-
-    const handleSubmit = () => {
-        if (!name || !dob) {
-            toast.error("Nome e Data de Nascimento são obrigatórios.");
-            return;
-        }
-        onSave({ name, dob, injuryHistory });
-    };
-
-    return (
-        <Card className="max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-brand-light">{athlete ? 'Editar Atleta' : 'Novo Atleta'}</h2>
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-400">Nome Completo</label>
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-brand-primary focus:border-brand-primary" />
-                </div>
-                <div className="flex gap-4">
-                    <div className="flex-grow">
-                        <label className="block text-sm font-medium text-gray-400">Data de Nascimento</label>
-                        <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-brand-primary focus:border-brand-primary" />
-                    </div>
-                    <div>
-                         <label className="block text-sm font-medium text-gray-400">Idade</label>
-                         <div className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md p-2 text-white">{age > 0 ? `${age} anos` : '-'}</div>
-                    </div>
-                </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-400">Histórico de Lesões</label>
-                    <textarea value={injuryHistory} onChange={(e) => setInjuryHistory(e.target.value)} rows={3} className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-brand-primary focus:border-brand-primary"></textarea>
-                </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-4">
-                <Button onClick={onCancel} variant="secondary">Cancelar</Button>
-                <Button onClick={handleSubmit}>{athlete ? 'Salvar Alterações' : 'Adicionar Atleta'}</Button>
-            </div>
-        </Card>
-    );
-};
-
-const AthleteProfile: FC<{ athlete: Athlete; onBack: () => void; addAssessment: (athleteId: string, type: AssessmentType, data: any) => void; onExportPDF: (type: AssessmentType | 'all') => void; userRole: 'admin' | 'student'; }> = ({ athlete, onBack, addAssessment, onExportPDF, userRole }) => {
-    const [addingAssessment, setAddingAssessment] = useState<AssessmentType | null>(null);
-    const [activeTab, setActiveTab] = useState<AssessmentType>('bioimpedance');
-
-    const handleAddAssessment = (type: AssessmentType, data: any) => {
-        addAssessment(athlete.id, type, data);
-        setAddingAssessment(null);
-    };
-
-    const assessmentMap: { type: AssessmentType; title: string; shortTitle: string, ViewComponent: FC<any>, icon: React.ReactNode }[] = [
-        { type: 'bioimpedance', title: 'Bioimpedância', shortTitle: 'Corpo', ViewComponent: BioimpedanceView, icon: <BodyIcon className="w-5 h-5"/> },
-        { type: 'isometricStrength', title: 'Força Isométrica', shortTitle: 'Isometria', ViewComponent: IsometricStrengthView, icon: <MuscleIcon className="w-5 h-5" /> },
-        { type: 'generalStrength', title: 'Força Geral', shortTitle: 'Força', ViewComponent: GeneralStrengthView, icon: <BarbellIcon className="w-5 h-5" /> },
-        { type: 'cmj', title: 'Salto (CMJ)', shortTitle: 'Salto', ViewComponent: CMJView, icon: <JumpIcon className="w-5 h-5" /> },
-        { type: 'vo2max', title: 'VO₂ max', shortTitle: 'VO₂ max', ViewComponent: VO2MaxView, icon: <LungsIcon className="w-5 h-5" /> },
-    ];
-    
-    const getFormComponent = (type: AssessmentType | null) => {
-        switch(type) {
-            case 'bioimpedance': return <BioimpedanceForm onAdd={(data) => handleAddAssessment('bioimpedance', data)} onCancel={() => setAddingAssessment(null)} />;
-            case 'isometricStrength': return <IsometricStrengthForm onAdd={(data) => handleAddAssessment('isometricStrength', data)} onCancel={() => setAddingAssessment(null)} />;
-            case 'cmj': return <CMJForm onAdd={(data) => handleAddAssessment('cmj', data)} onCancel={() => setAddingAssessment(null)} />;
-            case 'generalStrength': return <GeneralStrengthForm onAdd={(data) => handleAddAssessment('generalStrength', data)} onCancel={() => setAddingAssessment(null)} />;
-            case 'vo2max': return <VO2MaxForm onAdd={(data) => handleAddAssessment('vo2max', data)} onCancel={() => setAddingAssessment(null)} />;
-            default: return null;
-        }
+      case 'isometricStrength':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <XAxis dataKey="date" tick={{fill: '#4b5563', fontSize: 10}} />
+              <YAxis tick={{fill: '#4b5563', fontSize: 10}} />
+              <Tooltip contentStyle={{backgroundColor: '#111827', border: 'none', borderRadius: '12px'}} />
+              <Legend verticalAlign="top" height={36}/>
+              <Bar name="Quad D" dataKey="quadricepsR" fill="#2D7A74" radius={[4, 4, 0, 0]} />
+              <Bar name="Quad E" dataKey="quadricepsL" fill="#63BFAA" radius={[4, 4, 0, 0]} />
+              <Bar name="Isquio D" dataKey="hamstringsR" fill="#E53E3E" radius={[4, 4, 0, 0]} />
+              <Bar name="Isquio E" dataKey="hamstringsL" fill="#F56565" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        );
+      case 'vo2max':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <XAxis dataKey="date" tick={{fill: '#4b5563', fontSize: 10}} />
+              <YAxis tick={{fill: '#4b5563', fontSize: 10}} />
+              <Tooltip contentStyle={{backgroundColor: '#111827', border: 'none', borderRadius: '12px'}} />
+              <Legend verticalAlign="top" height={36}/>
+              <Line name="VO2 Max" type="monotone" dataKey="vo2max" stroke="#63BFAA" strokeWidth={3} dot={{fill: '#63BFAA'}} />
+              <Line name="FC Limiar" type="monotone" dataKey="thresholdHeartRate" stroke="#2D7A74" strokeWidth={2} dot={{fill: '#2D7A74'}} />
+            </LineChart>
+          </ResponsiveContainer>
+        );
+      case 'cmj':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <XAxis dataKey="date" tick={{fill: '#4b5563', fontSize: 10}} />
+              <YAxis tick={{fill: '#4b5563', fontSize: 10}} />
+              <Tooltip contentStyle={{backgroundColor: '#111827', border: 'none', borderRadius: '12px'}} />
+              <Area name="Altura (cm)" type="monotone" dataKey="height" stroke="#63BFAA" fill="#63BFAA33" strokeWidth={3} />
+              <Area name="RSI" type="monotone" dataKey="rsi" stroke="#E53E3E" fill="#E53E3E33" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        );
+      default:
+        return (
+          <div className="h-[300px] flex items-center justify-center text-gray-500 italic">Visualização não disponível.</div>
+        );
     }
+  };
 
-    const activeAssessmentDetails = assessmentMap.find(a => a.type === activeTab);
-
-    return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-                 <Button onClick={onBack} variant="secondary">
-                     {userRole === 'admin' ? <><ArrowLeftIcon className="w-5 h-5" /> Voltar</> : <><LogoutIcon className="w-5 h-5" /> Sair</>}
-                </Button>
-                 <Button onClick={() => onExportPDF('all')}>
-                    <PDFIcon className="w-5 h-5" /> Exportar PDF Geral
-                </Button>
-            </div>
-            <Card>
-                <div className="flex items-center gap-4">
-                    <UserIcon className="w-16 h-16 text-brand-secondary" />
-                    <div>
-                        <h2 className="text-3xl font-bold text-white">{athlete.name}</h2>
-                        <p className="text-gray-400">{calculateAge(athlete.dob)} anos ({formatDate(athlete.dob)})</p>
-                    </div>
-                </div>
-                <div className="mt-4">
-                    <h3 className="font-semibold text-brand-light">Histórico de Lesões:</h3>
-                    <p className="text-gray-300 whitespace-pre-wrap">{athlete.injuryHistory || 'Nenhum histórico registrado.'}</p>
-                </div>
-            </Card>
-
-            <div className="bg-gray-800 rounded-xl p-2">
-                <div className="flex justify-center space-x-1 overflow-x-auto">
-                    {assessmentMap.map(({ type, shortTitle, icon }) => (
-                        <button
-                            key={type}
-                            onClick={() => setActiveTab(type)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition-all duration-200 text-sm md:text-base whitespace-nowrap
-                                ${activeTab === type ? 'bg-brand-primary text-white' : 'text-gray-300 hover:bg-gray-700'}`}
-                        >
-                            {icon}
-                            <span className="hidden sm:inline">{shortTitle}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {activeAssessmentDetails && (
-                <AssessmentSection
-                    title={activeAssessmentDetails.title}
-                    onAdd={() => setAddingAssessment(activeTab)}
-                    onExportPDF={() => onExportPDF(activeTab)}
-                    isReadOnly={userRole === 'student'}
-                >
-                    {addingAssessment === activeTab ? (
-                        getFormComponent(activeTab)
-                    ) : (
-                        <activeAssessmentDetails.ViewComponent assessments={athlete.assessments[activeTab]} />
-                    )}
-                </AssessmentSection>
-            )}
-
+  return (
+    <Card className="w-full">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <h4 className="text-brand-secondary font-black text-[10px] uppercase tracking-widest italic">Análise Comparativa</h4>
+        <div className="flex gap-1 bg-gray-900 p-1 rounded-xl border border-gray-700 overflow-x-auto w-full md:w-auto">
+          {(['isometricStrength', 'vo2max', 'cmj', 'bioimpedance'] as AssessmentType[]).map(type => (
+            <button 
+              key={type} 
+              onClick={() => setSelectedType(type)}
+              className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all shrink-0 ${selectedType === type ? 'bg-brand-primary text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              {type === 'isometricStrength' ? 'Força' : type === 'vo2max' ? 'VO2' : type === 'cmj' ? 'Salto' : 'Bio'}
+            </button>
+          ))}
         </div>
-    );
-};
-
-const AthleteList: FC<{ athletes: Athlete[]; onSelect: (athlete: Athlete) => void; onAdd: () => void; searchTerm: string; onSearchChange: (term: string) => void; }> = ({ athletes, onSelect, onAdd, searchTerm, onSearchChange }) => (
-    <Card>
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <h2 className="text-2xl font-bold text-brand-light">Atletas</h2>
-            <div className="relative w-full md:w-auto flex-grow max-w-sm">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                   <SearchIcon className="w-5 h-5 text-gray-400" />
-                </span>
-                <input
-                    type="text"
-                    placeholder="Buscar atleta..."
-                    value={searchTerm}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-brand-primary focus:border-brand-primary"
-                    aria-label="Buscar atleta"
-                />
-            </div>
-            <Button onClick={onAdd} className="w-full md:w-auto"><PlusIcon className="w-5 h-5" /> Adicionar Atleta</Button>
-        </div>
-        <div className="space-y-3">
-            {athletes.length > 0 ? (
-                athletes.map(athlete => (
-                    <Card key={athlete.id} onClick={() => onSelect(athlete)} className="!p-0">
-                        <div className="flex items-center p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors duration-200">
-                            <UserIcon className="w-8 h-8 mr-4 text-brand-secondary" />
-                            <div className="flex-grow">
-                                <p className="font-semibold text-white">{athlete.name}</p>
-                                <p className="text-sm text-gray-400">{calculateAge(athlete.dob)} anos</p>
-                            </div>
-                        </div>
-                    </Card>
-                ))
-            ) : (
-                <p className="text-center text-gray-500 py-8">
-                    {searchTerm ? "Nenhum atleta encontrado." : "Nenhum atleta cadastrado."}
-                </p>
-            )}
-        </div>
+      </div>
+      {renderComparativeChart()}
     </Card>
-);
-
-// --- PRINT VIEW ---
-const PrintView: FC<{ athlete: Athlete; reportType: AssessmentType | 'all' }> = ({ athlete, reportType }) => {
-     const professionalInfo = (
-        <div className="text-right">
-            <p className="font-bold">Prof. Leandro Barbosa</p>
-            <p>LB Sports - Performance e Prevenção de Lesões</p>
-            <p>CREF: 036202-G/PR</p>
-        </div>
-    );
-
-    const assessmentMap: { type: AssessmentType; title: string; ViewComponent: FC<any> }[] = [
-        { type: 'bioimpedance', title: 'Relatório de Bioimpedância', ViewComponent: BioimpedanceView },
-        { type: 'isometricStrength', title: 'Relatório de Força Isométrica', ViewComponent: IsometricStrengthView },
-        { type: 'generalStrength', title: 'Relatório de Força Geral', ViewComponent: GeneralStrengthView },
-        { type: 'cmj', title: 'Relatório de Salto Contra Movimento (CMJ)', ViewComponent: CMJView },
-        { type: 'vo2max', title: 'Relatório de VO₂ máx e Zonas de Treino', ViewComponent: VO2MaxView },
-    ];
-    
-    const sectionsToPrint = reportType === 'all'
-        ? assessmentMap
-        : assessmentMap.filter(sec => sec.type === reportType);
-
-    return (
-        <>
-        <style>{`
-            @media print {
-                body {
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                }
-                .printable-page {
-                    page-break-after: always;
-                }
-                .printable-page:last-child {
-                    page-break-after: auto;
-                }
-                .no-print { display: none !important; }
-            }
-            .print-container .text-white { color: #111827 !important; }
-            .print-container .text-gray-200 { color: #1f2937 !important; }
-            .print-container .text-gray-300 { color: #374151 !important; }
-            .print-container .text-gray-400 { color: #4b5563 !important; }
-            .print-container .text-gray-500 { color: #6b7280 !important; }
-            .print-container .text-gray-600 { color: #4b5563 !important; }
-            .print-container .bg-gray-700, .print-container .bg-gray-700\\/50, .print-container .bg-gray-800 { 
-                background-color: #f9fafb !important;
-                border: 1px solid #e5e7eb;
-            }
-            .print-container .shadow-lg { box-shadow: none !important; }
-            .print-container .text-brand-light { color: #1A4340 !important; }
-            .print-container .text-brand-secondary { color: #2D7A74 !important; }
-        `}</style>
-        <div className="print-container bg-white text-gray-900 font-sans">
-            {sectionsToPrint.map(({ type, title, ViewComponent }, index) => (
-                <div key={type} className="p-8 mx-auto max-w-4xl printable-page">
-                     <header className="flex justify-between items-center border-b-2 border-gray-300 pb-4">
-                        <LbSportsLogo isPrinting={true} />
-                        <div className="text-xs text-gray-700">{professionalInfo}</div>
-                    </header>
-                     <section className="my-6 text-center">
-                        <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
-                        <div className="flex justify-center gap-6 mt-2 text-gray-600">
-                            <span>Atleta: <span className="font-semibold">{athlete.name}</span></span>
-                            <span>Idade: <span className="font-semibold">{calculateAge(athlete.dob)} anos</span></span>
-                            <span>Data: <span className="font-semibold">{new Date().toLocaleDateString('pt-BR')}</span></span>
-                        </div>
-                    </section>
-                    
-                    <main>
-                       <ViewComponent assessments={athlete.assessments[type]} isPrinting={true} />
-                    </main>
-
-                     {index === sectionsToPrint.length - 1 && (
-                         <footer className="text-center text-xs text-gray-500 pt-8 mt-8 border-t border-gray-200">
-                             {professionalInfo}
-                         </footer>
-                     )}
-                </div>
-            ))}
-        </div>
-        </>
-    )
-}
-
-// --- LOGIN PAGE ---
-type User = { role: 'admin' } | { role: 'student'; athleteId: string };
-const LoginPage: FC<{ onLogin: (user: User) => void; athletes: Athlete[] }> = ({ onLogin, athletes }) => {
-    const [mode, setMode] = useState<'student' | 'admin'>('student');
-    const [selectedAthleteId, setSelectedAthleteId] = useState<string>(athletes[0]?.id || '');
-    const [dob, setDob] = useState('');
-
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [showSignup, setShowSignup] = useState(false);
-
-    const handleAdminLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-            const json = await res.json();
-            if (!res.ok) return toast.error(json.error || 'Falha no login');
-            window.localStorage.setItem('lb_sports_token', json.token);
-            onLogin({ role: json.user.role });
-        } catch (error) {
-            console.error('Admin login error', error);
-            toast.error('Erro ao tentar fazer login.');
-        }
-    };
-
-    const handleStudentLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        // If email provided, use credentials login; otherwise fallback to DOB-based local login for compatibility
-        if (email && password) {
-            try {
-                const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-                const json = await res.json();
-                if (!res.ok) return toast.error(json.error || 'Falha no login');
-                window.localStorage.setItem('lb_sports_token', json.token);
-                onLogin({ role: json.user.role, athleteId: (json.user.role === 'student' ? json.user.id : undefined) });
-            } catch (error) {
-                console.error('Student login error', error);
-                toast.error('Erro ao tentar fazer login.');
-            }
-            return;
-        }
-
-        const athlete = athletes.find(a => a.id === selectedAthleteId);
-        if (athlete && athlete.dob === dob) {
-            onLogin({ role: 'student', athleteId: athlete.id });
-        } else {
-            toast.error('Aluno ou data de nascimento incorretos.');
-        }
-    };
-
-    const handleSignup = async (e?: React.FormEvent) => {
-        if (e && typeof e.preventDefault === 'function') e.preventDefault();
-        try {
-            const roleToCreate = mode === 'admin' ? 'admin' : 'student';
-            const res = await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, role: roleToCreate }) });
-            const json = await res.json();
-            if (!res.ok) return toast.error(json.error || 'Falha ao criar usuário');
-            window.localStorage.setItem('lb_sports_token', json.token);
-            onLogin({ role: json.user.role });
-        } catch (error) {
-            console.error('Signup error', error);
-            toast.error('Erro ao criar usuário.');
-        }
-    };
-
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-4">
-            <div className="mb-8">
-                <LbSportsLogo />
-            </div>
-            <Card className="w-full max-w-md">
-                <div className="flex border-b border-gray-700 mb-6">
-                    <button onClick={() => setMode('student')} className={`flex-1 py-2 text-lg font-semibold transition-colors ${mode === 'student' ? 'text-brand-light border-b-2 border-brand-light' : 'text-gray-400'}`}>Sou Aluno</button>
-                    <button onClick={() => setMode('admin')} className={`flex-1 py-2 text-lg font-semibold transition-colors ${mode === 'admin' ? 'text-brand-light border-b-2 border-brand-light' : 'text-gray-400'}`}>Sou Professor</button>
-                </div>
-
-                {mode === 'student' ? (
-                    <form onSubmit={handleStudentLogin} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Seu Nome</label>
-                            <select value={selectedAthleteId} onChange={(e) => setSelectedAthleteId(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white">
-                                {athletes.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Data de Nascimento</label>
-                            <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Ou faça login com Email</label>
-                            <input type="email" placeholder="seu@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white mb-2" />
-                            <input type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <button type="button" onClick={() => setShowSignup(s => !s)} className="text-sm text-gray-400 underline">{showSignup ? 'Fechar cadastro' : 'Criar conta'}</button>
-                            <Button type="submit" className="!mt-0">Entrar</Button>
-                        </div>
-
-                        {showSignup && (
-                            <div className="space-y-4 mt-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
-                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1">Senha</label>
-                                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
-                                </div>
-                                <div className="flex justify-end">
-                                    <Button type="button" onClick={() => handleSignup()} >Criar conta</Button>
-                                </div>
-                            </div>
-                        )}
-                    </form>
-                ) : (
-                    <form onSubmit={handleAdminLogin} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
-                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Senha</label>
-                            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white" />
-                        </div>
-                         <Button type="submit" className="w-full !mt-6">Entrar</Button>
-                    </form>
-                )}
-            </Card>
-        </div>
-    );
+  );
 };
-
 
 // --- MAIN APP ---
 const App: FC = () => {
-  const { athletes, loading, addAthlete, updateAthlete, addAssessment } = useAthletes();
-  const [user, setUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState<'list' | 'profile' | 'form'>('list');
-  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
-  const [reportToExportPDF, setReportToExportPDF] = useState<AssessmentType | 'all' | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const { athletes, loading, addAthlete, addWellness, addWorkout, updateWorkout, addAssessment, addTestAthlete, analyzePerformance } = useAthletes();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'dash' | 'training' | 'assessment'>('dash');
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   
-  // Check for saved user session on initial load
-  useEffect(() => {
-    // Try to restore session from token, fallback to savedUser for compatibility
-    const restore = async () => {
-      try {
-        const token = localStorage.getItem('lb_sports_token');
-        if (token) {
-          const res = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-          if (res.ok) {
-            const json = await res.json();
-            setUser({ role: json.user.role, ...(json.user.role === 'student' ? { athleteId: json.user.id } : {}) } as User);
-            localStorage.setItem('lb_sports_user', JSON.stringify({ role: json.user.role, ...(json.user.role === 'student' ? { athleteId: json.user.id } : {}) }));
-            return;
-          }
-        }
+  const [modalState, setModalState] = useState<{
+    type: 'athlete' | 'wellness' | 'workout' | 'assessment' | 'ai' | null,
+    editingData?: any,
+    extraData?: any
+  }>({ type: null });
 
-        const savedUser = localStorage.getItem('lb_sports_user');
-        if (savedUser) {
-          setUser(JSON.parse(savedUser));
-        }
-      } catch (error) {
-        console.error("Failed to restore session", error);
-        localStorage.removeItem('lb_sports_user');
-        localStorage.removeItem('lb_sports_token');
-      }
-    };
-    restore();
-  }, []);
+  const selected = useMemo(() => athletes.find(a => a.id === selectedId), [athletes, selectedId]);
+  const [liveWorkout, setLiveWorkout] = useState<Workout | null>(null);
 
-  const filteredAthletes = useMemo(() => 
-    athletes.filter(athlete =>
-      athlete.name.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [athletes, searchTerm]);
-
-  useEffect(() => {
-      const handleAfterPrint = () => {
-          setReportToExportPDF(null);
-      };
-
-      if (reportToExportPDF) {
-          window.addEventListener('afterprint', handleAfterPrint, { once: true });
-          setTimeout(() => window.print(), 100);
-      }
-
-      return () => {
-          window.removeEventListener('afterprint', handleAfterPrint);
-      };
-  }, [reportToExportPDF]);
-
-  const handleLogin = (loggedInUser: User) => {
-      setUser(loggedInUser);
-      localStorage.setItem('lb_sports_user', JSON.stringify(loggedInUser));
-  };
-
-  const handleLogout = () => {
-      setUser(null);
-      setSelectedAthleteId(null);
-      setCurrentView('list');
-      localStorage.removeItem('lb_sports_user');
-      localStorage.removeItem('lb_sports_token');
-  };
-
-  const handleSelectAthlete = (athlete: Athlete) => {
-    setSelectedAthleteId(athlete.id);
-    setCurrentView('profile');
-  };
-  
-  const handleBackToList = () => {
-      setSelectedAthleteId(null);
-      setCurrentView('list');
-  };
-  
-  const handleShowAddForm = () => {
-      setSelectedAthleteId(null);
-      setCurrentView('form');
-  };
-  
-  const handleSaveAthlete = (data: Omit<Athlete, 'id' | 'assessments'>) => {
-      addAthlete(data);
-      setCurrentView('list');
-  };
-
-  const renderContent = () => {
-    if (loading) return <div className="flex justify-center items-center h-screen"><p>Carregando dados...</p></div>;
-    
-    const athleteIdForView = user?.role === 'student' ? user.athleteId : selectedAthleteId;
-    const selectedAthlete = athletes.find(a => a.id === athleteIdForView) || null;
-
-    if (!user) {
-        return <LoginPage onLogin={handleLogin} athletes={athletes} />;
-    }
-    
-    if (reportToExportPDF && selectedAthlete) {
-        return <PrintView athlete={selectedAthlete} reportType={reportToExportPDF} />;
-    }
-    
-    if (user.role === 'student') {
-        if (selectedAthlete) {
-            return <AthleteProfile athlete={selectedAthlete} onBack={handleLogout} addAssessment={addAssessment} onExportPDF={setReportToExportPDF} userRole="student" />;
-        }
-        return <div className="text-center"><p>Erro: Atleta não encontrado.</p><Button onClick={handleLogout}>Sair</Button></div>
-    }
-
-    // Admin View
-    switch (currentView) {
-      case 'profile':
-        return selectedAthlete && <AthleteProfile athlete={selectedAthlete} onBack={handleBackToList} addAssessment={addAssessment} onExportPDF={setReportToExportPDF} userRole="admin" />;
-      case 'form':
-        return <AthleteForm onSave={handleSaveAthlete} onCancel={handleBackToList}/>
-      case 'list':
-      default:
-        return <AthleteList athletes={filteredAthletes} onSelect={handleSelectAthlete} onAdd={handleShowAddForm} searchTerm={searchTerm} onSearchChange={setSearchTerm} />;
+  const handleAiAnalysis = async () => {
+    if (!selected) return;
+    setAiLoading(true);
+    try {
+      const res = await analyzePerformance(selected);
+      setAiInsight(res);
+      setModalState({ type: 'ai' });
+    } finally {
+      setAiLoading(false);
     }
   };
 
-  const showHeaderFooter = user && !reportToExportPDF;
-
-  return (
-    <div className={`min-h-screen font-sans ${reportToExportPDF ? 'bg-white' : 'bg-gray-900 text-gray-200'}`}>
-        {showHeaderFooter && (
-            <header className="bg-gray-800/50 backdrop-blur-sm sticky top-0 z-10 shadow-lg no-print">
-                <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-                    <LbSportsLogo />
-                    {user && user.role === 'admin' && (
-                        <Button onClick={handleLogout} variant="secondary">
-                            <LogoutIcon className="w-5 h-5" />
-                            Sair
-                        </Button>
-                    )}
-                </div>
-            </header>
-        )}
-
-        <main className={`container mx-auto p-4 md:p-6 ${!user ? 'flex items-center justify-center' : ''}`}>
-            {renderContent()}
-        </main>
-        
-        {showHeaderFooter && (
-             <footer className="bg-gray-800 mt-12 py-6 text-center text-gray-400 text-sm no-print">
-                 <div className="container mx-auto px-4">
-                     <p className="font-bold">Prof. Leandro Barbosa</p>
-                     <p>LB Sports - Performance e Prevenção de Lesões</p>
-                     <p>CREF: 036202-G/PR</p>
-                 </div>
-            </footer>
-        )}
+  if (loading) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-gray-950 text-brand-secondary font-black uppercase tracking-[0.5em] animate-pulse">
+       <div className="w-16 h-16 bg-brand-primary rounded-3xl mb-4 flex items-center justify-center text-white text-3xl">LB</div>
+       LB PERFORMANCE LAB
     </div>
   );
-}
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-gray-100 font-sans pb-20 overflow-x-hidden">
+      <nav className="bg-gray-900/60 backdrop-blur-2xl border-b border-gray-800/50 p-6 sticky top-0 z-[100]">
+        <div className="container mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-brand-primary rounded-2xl flex items-center justify-center font-black text-2xl shadow-2xl shadow-brand-primary/20 shrink-0">LB</div>
+            <div>
+              <h1 className="font-black tracking-tighter text-2xl uppercase italic leading-none">Elite Performance Hub</h1>
+              <p className="text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mt-1">Professional Athlete Systems</p>
+            </div>
+          </div>
+          <div className="flex gap-3 items-center w-full sm:w-auto">
+            <Button onClick={() => setModalState({ type: 'athlete' })} variant="secondary" className="px-4 py-2 shrink-0">+ Atleta</Button>
+            <select 
+              className="flex-grow sm:flex-grow-0 bg-gray-800 border border-gray-700 rounded-2xl px-5 py-3 text-sm font-bold min-w-[200px] outline-none transition-all focus:border-brand-primary"
+              onChange={e => setSelectedId(e.target.value)}
+              value={selectedId || ''}
+            >
+              <option value="">Buscar Atleta...</option>
+              {athletes.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </div>
+        </div>
+      </nav>
+
+      <main className="container mx-auto p-4 md:p-8">
+        {!selected ? (
+          <div className="text-center py-32 flex flex-col items-center animate-in fade-in zoom-in duration-700">
+            <h2 className="text-4xl md:text-7xl font-black text-white uppercase tracking-tighter italic leading-none max-w-2xl text-center">Gestão Esportiva de Elite</h2>
+            <p className="text-gray-500 font-bold uppercase tracking-widest mt-6 max-w-xl text-center">Métricas avançadas para otimização de performance e prevenção de lesões.</p>
+            <div className="flex flex-col sm:flex-row gap-5 mt-16 w-full max-w-md">
+              <Button onClick={() => setModalState({ type: 'athlete' })} className="flex-grow py-5 text-base">Novo Cadastro</Button>
+              <Button onClick={addTestAthlete} variant="secondary" className="flex-grow py-5 text-base">Atleta Demo</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8">
+            <PredictorIntelligence athlete={selected} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <Card className="lg:col-span-3 flex flex-col sm:flex-row justify-between items-center gap-6">
+                <div>
+                  <h2 className="text-4xl md:text-6xl font-black tracking-tighter italic uppercase text-white leading-none">{selected.name}</h2>
+                  <div className="flex gap-4 mt-4 items-center">
+                    <span className="text-gray-500 font-black uppercase text-[9px] tracking-widest bg-gray-900 px-3 py-1 rounded-full">{calculateAge(selected.dob)} ANOS</span>
+                    <span className="w-1.5 h-1.5 bg-brand-primary rounded-full"></span>
+                    <span className="text-brand-secondary font-black text-[9px] uppercase tracking-widest bg-brand-primary/10 px-3 py-1 rounded-full">SCORE: {selected.wellness[0]?.readinessScore || '--'}%</span>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button onClick={handleAiAnalysis} disabled={aiLoading} variant="accent" className="px-6 py-5">
+                    {aiLoading ? 'Analisando...' : 'Insights IA'}
+                  </Button>
+                  <Button onClick={() => setModalState({ type: 'wellness' })} variant="primary" className="px-10 py-5">Prontidão</Button>
+                </div>
+              </Card>
+
+              <Card className="flex flex-col justify-center items-center text-center">
+                 <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">Workload (7d)</p>
+                 <p className="text-4xl font-black text-white">
+                    {selected.workouts.slice(0, 7).reduce((acc, w) => acc + calculateWorkoutInternalLoad(w), 0).toLocaleString()}
+                 </p>
+                 <p className="text-[7px] text-gray-600 font-bold uppercase mt-1">AU</p>
+              </Card>
+            </div>
+
+            <div className="flex gap-2 bg-gray-900/30 p-2 rounded-3xl w-full sm:w-fit border border-gray-800">
+              {(['dash', 'training', 'assessment'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-8 md:px-14 py-4 rounded-2xl text-[10px] font-black transition-all tracking-widest shrink-0 uppercase ${activeTab === tab ? 'bg-brand-primary text-white shadow-xl shadow-brand-primary/40' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                  {tab === 'dash' ? 'Performance' : tab === 'training' ? 'Treinos' : 'Avaliações'}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'dash' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-right-8">
+                <Card title="Perfil de Recuperação">
+                  <div className="h-[350px] w-full mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={selected.wellness.slice().reverse().map((w, i) => ({ 
+                        name: i + 1, 
+                        score: w.readinessScore,
+                        load: (selected.workouts[i]?.rpe || 0) * 10
+                      }))}>
+                        <defs>
+                          <linearGradient id="colorRead" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#63BFAA" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#63BFAA" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+                        <XAxis dataKey="name" tick={false} axisLine={false} />
+                        <YAxis domain={[0, 100]} tick={{fill: '#4b5563', fontSize: 10}} axisLine={false} />
+                        <Tooltip contentStyle={{backgroundColor: '#111827', border: 'none', borderRadius: '16px'}} />
+                        <Area name="Prontidão" type="monotone" dataKey="score" stroke="#63BFAA" fillOpacity={1} fill="url(#colorRead)" strokeWidth={4} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+
+                <Card title="Fadiga Neuromuscular & Stress">
+                  <div className="h-[350px] mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
+                        { subject: 'Fadiga', A: selected.wellness[0]?.fatigue || 3 },
+                        { subject: 'Sono', A: selected.wellness[0]?.sleep || 3 },
+                        { subject: 'Stress', A: selected.wellness[0]?.stress || 3 },
+                        { subject: 'Dor', A: selected.wellness[0]?.soreness || 3 },
+                        { subject: 'Humor', A: selected.wellness[0]?.mood || 3 },
+                        { subject: 'Cognitivo', A: selected.wellness[0]?.cognitiveLoad || 3 },
+                      ]}>
+                        <PolarGrid stroke="#1f2937" />
+                        <PolarAngleAxis dataKey="subject" tick={{fill: '#4b5563', fontSize: 10, fontWeight: 'bold'}} />
+                        <Radar name="Status" dataKey="A" stroke="#63BFAA" fill="#63BFAA" fillOpacity={0.4} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'training' && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-8">
+                 <div className="flex justify-between items-center">
+                    <h3 className="text-3xl font-black uppercase italic tracking-tighter text-white">Prescrições de Microciclo</h3>
+                    <Button variant="secondary" onClick={() => setModalState({ type: 'workout' })}>+ Novo Treino</Button>
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {selected.workouts.map(w => (
+                        <Card key={w.id} className={`flex flex-col border-l-8 ${w.status === 'completed' ? 'border-green-500 opacity-60' : 'border-brand-primary shadow-2xl shadow-brand-primary/10'}`}>
+                            <div className="flex justify-between items-start mb-6">
+                              <div>
+                                <span className="text-[8px] font-black bg-gray-900 text-gray-400 px-3 py-1 rounded-full uppercase tracking-widest">{w.phase}</span>
+                                <h5 className="text-2xl font-black uppercase italic text-white leading-tight mt-2 truncate">{w.name}</h5>
+                                <p className="text-[9px] font-bold text-gray-500 uppercase mt-2 tracking-widest">{formatDate(w.date)}</p>
+                              </div>
+                              <button onClick={() => setModalState({ type: 'workout', editingData: w })} className="p-2 text-gray-600 hover:text-white"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+                            </div>
+                            {w.status === 'completed' ? (
+                              <div className="mt-auto pt-6 border-t border-gray-700/50 flex justify-between items-center">
+                                <div>
+                                  <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Carga Interna</p>
+                                  <p className="text-xl font-black text-brand-secondary">{calculateWorkoutInternalLoad(w)} AU</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">sRPE</p>
+                                  <p className="text-lg font-black text-white">{w.rpe}/10</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <Button onClick={() => setLiveWorkout(w)} variant="accent" className="w-full mt-auto py-5">Iniciar Treino</Button>
+                            )}
+                        </Card>
+                    ))}
+                 </div>
+              </div>
+            )}
+
+            {activeTab === 'assessment' && (
+              <div className="space-y-10 animate-in fade-in slide-in-from-right-8">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-3xl font-black uppercase italic tracking-tighter text-white">Protocolos de Avaliação</h3>
+                  <Button onClick={() => setModalState({ type: 'assessment' })} variant="secondary">+ Registrar Avaliação</Button>
+                </div>
+
+                <AssessmentComparison athlete={selected} />
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {selected.assessments.isometricStrength[0] && (
+                    <Card title="Métricas de Força & Assimetria">
+                      <div className="space-y-6 mt-4">
+                        {(() => {
+                          const s = selected.assessments.isometricStrength[0];
+                          const ratios = calculateIQRatios(s.quadricepsR, s.quadricepsL, s.hamstringsR, s.hamstringsL);
+                          return (
+                            <>
+                              <div className="bg-gray-950 p-6 rounded-3xl border border-gray-800">
+                                <div className="flex justify-between mb-4">
+                                  <span className="text-[9px] font-black text-gray-500 uppercase">Pico Meio Agachamento</span>
+                                  <span className="text-brand-secondary font-black">{s.halfSquatKgf} kgf</span>
+                                </div>
+                                <div className="flex justify-around items-center">
+                                  <div className="text-center">
+                                    <p className="text-[8px] text-gray-600 uppercase mb-2">Déficit Q</p>
+                                    <p className={`text-2xl font-black ${interpretAsymmetry(calculateAsymmetry(s.quadricepsR, s.quadricepsL)).color}`}>{calculateAsymmetry(s.quadricepsR, s.quadricepsL)}%</p>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-[8px] text-gray-600 uppercase mb-2">Déficit I</p>
+                                    <p className={`text-2xl font-black ${interpretAsymmetry(calculateAsymmetry(s.hamstringsR, s.hamstringsL)).color}`}>{calculateAsymmetry(s.hamstringsR, s.hamstringsL)}%</p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-gray-950 p-4 rounded-3xl border border-gray-800 text-center">
+                                  <p className="text-[8px] text-gray-600 uppercase mb-2">Relação I/Q (D)</p>
+                                  <p className={`text-xl font-black ${ratios.right.status === 'good' ? 'text-brand-secondary' : 'text-red-500'}`}>{ratios.right.ratio}%</p>
+                                </div>
+                                <div className="bg-gray-950 p-4 rounded-3xl border border-gray-800 text-center">
+                                  <p className="text-[8px] text-gray-600 uppercase mb-2">Relação I/Q (E)</p>
+                                  <p className={`text-xl font-black ${ratios.left.status === 'good' ? 'text-brand-secondary' : 'text-red-500'}`}>{ratios.left.ratio}%</p>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </Card>
+                  )}
+
+                  <div className="space-y-8">
+                     {selected.assessments.cmj[0] && (
+                       <Card className="bg-brand-primary/5 border-brand-primary/20" title="Capacidade Reativa (CMJ)">
+                          <div className="flex justify-between items-end">
+                             <div>
+                               <p className="text-5xl font-black text-white">{selected.assessments.cmj[0].power} <span className="text-xs text-gray-600">W</span></p>
+                               <p className="text-[9px] font-black text-gray-500 uppercase mt-2">Potência de Pico</p>
+                             </div>
+                             <div className="text-right">
+                               <p className="text-3xl font-black text-brand-secondary">{selected.assessments.cmj[0].height} cm</p>
+                               <p className="text-[9px] font-black text-gray-600 uppercase">RSI: {selected.assessments.cmj[0].rsi || 'N/A'}</p>
+                             </div>
+                          </div>
+                       </Card>
+                     )}
+                     
+                     <div className="grid grid-cols-2 gap-4">
+                       {selected.assessments.bioimpedance[0] && (
+                         <Card title="Composição Corporal">
+                            <div className="flex flex-col gap-2">
+                              <div>
+                                <p className="text-4xl font-black text-white">{selected.assessments.bioimpedance[0].fatPercentage}%</p>
+                                <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Gordura</p>
+                              </div>
+                              <div className="pt-2 border-t border-gray-700">
+                                <p className="text-xl font-black text-brand-secondary">{selected.assessments.bioimpedance[0].muscleMass} kg</p>
+                                <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Massa Magra</p>
+                              </div>
+                            </div>
+                         </Card>
+                       )}
+                       {selected.assessments.vo2max[0] && (
+                         <Card title="Capacidade Aeróbica">
+                            <p className="text-4xl font-black text-brand-secondary">{selected.assessments.vo2max[0].vo2max}</p>
+                            <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">ml/kg/min</p>
+                         </Card>
+                       )}
+                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {modalState.type === 'athlete' && (
+        <div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-4 backdrop-blur-xl">
+           <AthleteForm onCancel={() => setModalState({ type: null })} onSave={d => { addAthlete(d); setModalState({ type: null }); }} />
+        </div>
+      )}
+
+      {modalState.type === 'wellness' && selected && (
+        <div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-4 backdrop-blur-xl">
+          <WellnessForm onCancel={() => setModalState({ type: null })} onSave={d => { addWellness(selected.id, d); setModalState({ type: null }); }} />
+        </div>
+      )}
+
+      {modalState.type === 'workout' && selected && (
+        <div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-4 backdrop-blur-xl overflow-y-auto">
+          <WorkoutBuilder 
+            initialWorkout={modalState.editingData}
+            onCancel={() => setModalState({ type: null })} 
+            onSave={d => { addWorkout(selected.id, d); setModalState({ type: null }); }} 
+            onUpdate={w => { updateWorkout(selected.id, w); setModalState({ type: null }); }}
+          />
+        </div>
+      )}
+
+      {modalState.type === 'assessment' && selected && (
+        <div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-4 backdrop-blur-xl overflow-y-auto">
+          <AssessmentEntry 
+            onCancel={() => setModalState({ type: null })} 
+            onSave={(type, data) => { addAssessment(selected.id, type, data); setModalState({ type: null }); }} 
+          />
+        </div>
+      )}
+
+      {modalState.type === 'ai' && (
+        <div className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-4 backdrop-blur-xl overflow-y-auto">
+          <Card title="Relatório de Inteligência Performance" className="max-w-2xl w-full mx-auto p-10">
+            <div className="prose prose-invert prose-emerald text-sm text-gray-300 space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+              {aiInsight?.split('\n').map((line, i) => (
+                <p key={i}>{line}</p>
+              ))}
+            </div>
+            <Button onClick={() => setModalState({ type: null })} className="w-full mt-10 py-5">Fechar Relatório</Button>
+          </Card>
+        </div>
+      )}
+
+      {liveWorkout && selected && (
+        <WorkoutLive 
+          workout={liveWorkout} 
+          onCancel={() => setLiveWorkout(null)} 
+          onFinish={w => { updateWorkout(selected.id, w); setLiveWorkout(null); toast.success("Dados computados!"); }} 
+        />
+      )}
+    </div>
+  );
+};
+
+// --- SUB COMPONENTS ---
+
+const AthleteForm: FC<{ onSave: (data: any) => void; onCancel: () => void }> = ({ onSave, onCancel }) => {
+  const [name, setName] = useState('');
+  const [dob, setDob] = useState('');
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !dob) return toast.error("Preencha todos os campos.");
+    onSave({ name, dob, injuryHistory: '' });
+  };
+  return (
+    <Card className="max-w-md w-full mx-auto space-y-6" title="Novo Registro">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className="text-[9px] font-black text-gray-500 uppercase block mb-2 tracking-widest">Nome do Atleta</label>
+          <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-gray-900 border border-gray-700/50 rounded-2xl p-4 text-sm outline-none" placeholder="Ex: Lucas Silva" />
+        </div>
+        <div>
+          <label className="text-[9px] font-black text-gray-500 uppercase block mb-2 tracking-widest">Data de Nascimento</label>
+          <input type="date" value={dob} onChange={e => setDob(e.target.value)} className="w-full bg-gray-900 border border-gray-700/50 rounded-2xl p-4 text-sm outline-none" />
+        </div>
+        <div className="flex gap-4 pt-4">
+          <Button onClick={onCancel} variant="secondary" className="flex-grow">Voltar</Button>
+          <Button type="submit" className="flex-grow">Confirmar</Button>
+        </div>
+      </form>
+    </Card>
+  );
+};
+
+const WellnessForm: FC<{ onSave: (data: Omit<WellnessEntry, 'id' | 'readinessScore'>) => void; onCancel: () => void }> = ({ onSave, onCancel }) => {
+  const [data, setData] = useState({ fatigue: 3, sleep: 3, stress: 3, soreness: 3, mood: 3, cognitiveLoad: 3 });
+  const metrics = [
+    { key: 'fatigue', label: 'Fadiga Muscular', low: 'Novo', high: 'Exausto' },
+    { key: 'sleep', label: 'Qualidade do Sono', low: 'Péssimo', high: 'Excelente' },
+    { key: 'stress', label: 'Tensão/Stress', low: 'Zen', high: 'Tenso' },
+    { key: 'soreness', label: 'Dor Muscular', low: 'Zero', high: 'Muita' },
+    { key: 'mood', label: 'Humor/Vigor', low: 'Mal', high: 'Bem' },
+    { key: 'cognitiveLoad', label: 'Fadiga Cognitiva', low: 'Focado', high: 'Exausto' },
+  ];
+  return (
+    <Card className="max-w-md w-full mx-auto space-y-6" title="Check-in de Prontidão">
+      <div className="space-y-5">
+        {metrics.map(m => (
+          <div key={m.key} className="space-y-3">
+            <div className="flex justify-between text-[9px] font-black uppercase text-gray-400">
+              <span>{m.label}</span>
+              <span className="text-brand-secondary font-bold">{data[m.key as keyof typeof data]}</span>
+            </div>
+            <input 
+              type="range" min="1" max="5" 
+              value={data[m.key as keyof typeof data]} 
+              onChange={e => setData({...data, [m.key]: parseInt(e.target.value)})}
+              className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-brand-secondary"
+            />
+          </div>
+        ))}
+      </div>
+      <Button onClick={() => onSave({...data, date: new Date().toISOString()})} className="w-full mt-6 py-5">Submeter Dados</Button>
+    </Card>
+  );
+};
+
+const WorkoutBuilder: FC<{ initialWorkout?: Partial<Workout>, onSave: (w: Omit<Workout, 'id'>) => void, onUpdate?: (w: Workout) => void, onCancel: () => void }> = ({ initialWorkout, onSave, onUpdate, onCancel }) => {
+  const [name, setName] = useState(initialWorkout?.name || '');
+  const [phase, setPhase] = useState(initialWorkout?.phase || 'Potência');
+  const [exercises, setExercises] = useState<PrescribedExercise[]>(initialWorkout?.exercises || []);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [search, setSearch] = useState('');
+  const [localLibrary, setLocalLibrary] = useState<ExerciseDefinition[]>(INITIAL_EXERCISE_LIBRARY);
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customEx, setCustomEx] = useState({ name: '', muscleGroup: 'Geral' });
+  
+  const addFromLibrary = (libEx: ExerciseDefinition) => {
+    setExercises([...exercises, { 
+      id: `pre-${Date.now()}`, 
+      name: libEx.name, 
+      muscleGroup: libEx.muscleGroup, 
+      sets: 3, 
+      reps: '12', 
+      weight: 'Auto' 
+    }]);
+    setShowLibrary(false);
+  };
+
+  const addCustomExercise = () => {
+    if (!customEx.name) return toast.error("Nome obrigatório");
+    const newEx = { ...customEx, id: `custom-${Date.now()}` };
+    setLocalLibrary([newEx, ...localLibrary]);
+    addFromLibrary(newEx);
+    setShowCustomForm(false);
+    setCustomEx({ name: '', muscleGroup: 'Geral' });
+  };
+
+  const filteredLibrary = useMemo(() => {
+    return localLibrary.filter(ex => 
+      ex.name.toLowerCase().includes(search.toLowerCase()) || 
+      ex.muscleGroup.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [search, localLibrary]);
+
+  return (
+    <Card className="max-w-3xl w-full mx-auto space-y-6" title="Prescrição de Treinamento">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2">Nome da Sessão</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Força Máxima - Inferiores" className="w-full bg-gray-900 border border-gray-700/50 rounded-2xl p-4 text-sm outline-none focus:border-brand-primary" />
+        </div>
+        <div>
+          <label className="block text-[9px] font-black text-gray-500 uppercase tracking-widest mb-2">Fase de Treinamento</label>
+          <select value={phase} onChange={e => setPhase(e.target.value)} className="w-full bg-gray-900 border border-gray-700/50 rounded-2xl p-4 text-sm outline-none focus:border-brand-primary">
+             {WORKOUT_PHASES.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+        {exercises.map((ex, i) => (
+          <div key={ex.id} className="bg-gray-950 p-4 rounded-3xl border border-gray-800 flex items-center gap-4 group">
+            <span className="text-[10px] font-black text-gray-600">#{i+1}</span>
+            <input 
+              value={ex.name} 
+              onChange={e => setExercises(exercises.map(item => item.id === ex.id ? {...item, name: e.target.value} : item))}
+              className="flex-grow font-black text-xs uppercase tracking-tight text-white bg-transparent border-none outline-none focus:text-brand-secondary transition-colors"
+              placeholder="Nome do exercício"
+            />
+            <div className="flex gap-2">
+              <div className="flex items-center gap-1">
+                 <span className="text-[8px] text-gray-600 font-bold">S</span>
+                 <input value={ex.sets} type="number" onChange={e => setExercises(exercises.map(item => item.id === ex.id ? {...item, sets: parseInt(e.target.value)} : item))} className="w-10 bg-gray-900 rounded-xl p-2 text-center text-[10px] font-bold" />
+              </div>
+              <div className="flex items-center gap-1">
+                 <span className="text-[8px] text-gray-600 font-bold">R</span>
+                 <input value={ex.reps} onChange={e => setExercises(exercises.map(item => item.id === ex.id ? {...item, reps: e.target.value} : item))} className="w-14 bg-gray-900 rounded-xl p-2 text-center text-[10px] font-bold" />
+              </div>
+            </div>
+            <button onClick={() => setExercises(exercises.filter(item => item.id !== ex.id))} className="text-gray-700 hover:text-red-500 transition-colors"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-4 pt-4 border-t border-gray-700">
+        <Button onClick={() => setShowLibrary(true)} variant="secondary" className="flex-grow">Abrir Biblioteca</Button>
+        <Button onClick={() => {
+          if (!name) return toast.error("Nome da sessão obrigatório.");
+          if (initialWorkout?.id && onUpdate) onUpdate({...initialWorkout as Workout, name, phase, exercises});
+          else onSave({ name, phase, date: new Date().toISOString(), status: 'planned', exercises });
+        }} className="flex-grow">Salvar Planilha</Button>
+      </div>
+
+      {showLibrary && (
+        <div className="fixed inset-0 bg-black/90 z-[300] flex items-center justify-center p-6 backdrop-blur-sm">
+          <Card className="max-w-md w-full max-h-[85vh] flex flex-col" title="Biblioteca de Movimentos">
+            {showCustomForm ? (
+              <div className="space-y-4 mb-6 p-4 bg-gray-900 rounded-3xl border border-brand-primary/20 animate-in slide-in-from-top-4">
+                <h5 className="text-[9px] font-black text-brand-secondary uppercase tracking-widest">Novo Exercício</h5>
+                <input 
+                  value={customEx.name} 
+                  onChange={e => setCustomEx({...customEx, name: e.target.value})} 
+                  placeholder="Nome do exercício..." 
+                  className="w-full bg-gray-950 p-4 rounded-2xl text-sm border border-gray-800 outline-none focus:border-brand-primary"
+                />
+                <input 
+                  value={customEx.muscleGroup} 
+                  onChange={e => setCustomEx({...customEx, muscleGroup: e.target.value})} 
+                  placeholder="Grupo muscular..." 
+                  className="w-full bg-gray-950 p-4 rounded-2xl text-sm border border-gray-800 outline-none focus:border-brand-primary"
+                />
+                <div className="flex gap-2">
+                   <Button onClick={() => setShowCustomForm(false)} variant="secondary" className="flex-grow">Cancelar</Button>
+                   <Button onClick={addCustomExercise} className="flex-grow">Confirmar</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2 mb-4">
+                <input 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)} 
+                  placeholder="Pesquisar..." 
+                  className="flex-grow bg-gray-900 border border-gray-700 p-4 rounded-2xl text-sm outline-none focus:border-brand-primary"
+                />
+                <Button onClick={() => setShowCustomForm(true)} variant="accent" className="px-4">+</Button>
+              </div>
+            )}
+            
+            <div className="overflow-y-auto flex-grow space-y-2 pr-2 custom-scrollbar">
+              {filteredLibrary.map(ex => (
+                <button 
+                  key={ex.id} 
+                  onClick={() => addFromLibrary(ex)}
+                  className="w-full text-left p-4 bg-gray-900 hover:bg-brand-primary rounded-2xl transition-all border border-gray-800 hover:border-brand-secondary group"
+                >
+                  <p className="font-black text-sm text-gray-300 group-hover:text-white uppercase tracking-tight">{ex.name}</p>
+                  <span className="text-[10px] text-gray-500 font-bold italic block mt-1 uppercase">{ex.muscleGroup}</span>
+                </button>
+              ))}
+              {filteredLibrary.length === 0 && (
+                <p className="text-center text-gray-600 italic py-8 text-[10px] uppercase font-bold tracking-widest">Nenhum exercício encontrado</p>
+              )}
+            </div>
+            <Button onClick={() => setShowLibrary(false)} variant="secondary" className="w-full mt-6">Voltar</Button>
+          </Card>
+        </div>
+      )}
+    </Card>
+  );
+};
+
+const AssessmentEntry: FC<{ onCancel: () => void; onSave: (type: AssessmentType, data: any) => void }> = ({ onCancel, onSave }) => {
+  const [type, setType] = useState<AssessmentType>('isometricStrength');
+  const [data, setData] = useState<any>({ date: new Date().toISOString() });
+
+  const computedRSI = useMemo(() => {
+    if (type === 'cmj' && data.height && data.timeToTakeoff) {
+      return calculateRSI(data.height, data.timeToTakeoff);
+    }
+    return 0;
+  }, [type, data.height, data.timeToTakeoff]);
+
+  return (
+    <Card className="max-w-xl w-full mx-auto space-y-6" title="Lançamento de Protocolos">
+      <div className="space-y-1">
+        <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1">Tipo de Avaliação</label>
+        <select value={type} onChange={e => { setType(e.target.value as AssessmentType); setData({ date: new Date().toISOString() }); }} className="w-full bg-gray-900 border border-gray-700/50 rounded-2xl p-4 text-sm outline-none focus:border-brand-primary">
+          <option value="isometricStrength">Força Isométrica (Pico)</option>
+          <option value="vo2max">VO2 Máximo / Ergo</option>
+          <option value="cmj">Capacidade Reativa (CMJ)</option>
+          <option value="bioimpedance">Bioimpedância (Composição Corporal)</option>
+        </select>
+      </div>
+
+      <div className="bg-gray-950 p-6 rounded-3xl border border-gray-800 space-y-4 shadow-inner">
+        {type === 'isometricStrength' && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Pico Meio Agachamento (kgf)</label>
+                <input type="number" step="0.1" onChange={e => setData({...data, halfSquatKgf: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 focus:border-brand-primary outline-none" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Quad D (kgf)</label>
+                <input type="number" onChange={e => setData({...data, quadricepsR: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 focus:border-brand-primary outline-none" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Quad E (kgf)</label>
+                <input type="number" onChange={e => setData({...data, quadricepsL: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 focus:border-brand-primary outline-none" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Isquio D (kgf)</label>
+                <input type="number" onChange={e => setData({...data, hamstringsR: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 focus:border-brand-primary outline-none" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Isquio E (kgf)</label>
+                <input type="number" onChange={e => setData({...data, hamstringsL: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 focus:border-brand-primary outline-none" />
+            </div>
+          </div>
+        )}
+        {type === 'cmj' && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Altura Salto (cm)</label>
+                <input type="number" step="0.1" onChange={e => setData({...data, height: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 focus:border-brand-primary outline-none" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Profundidade (cm)</label>
+                <input type="number" step="0.1" onChange={e => setData({...data, depth: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 focus:border-brand-primary outline-none" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Potência Pico (W)</label>
+                <input type="number" onChange={e => setData({...data, power: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 focus:border-brand-primary outline-none" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Tempo Decolagem (ms)</label>
+                <input type="number" placeholder="Ex: 450" onChange={e => setData({...data, timeToTakeoff: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 focus:border-brand-primary outline-none" />
+            </div>
+            <div className="col-span-2 p-5 bg-brand-primary/10 rounded-2xl border border-brand-primary/30 flex justify-between items-center mt-2">
+               <div>
+                  <p className="text-[9px] font-black text-brand-secondary uppercase tracking-widest">RSI Automático</p>
+                  <p className="text-3xl font-black text-white mt-1">RSI: {computedRSI || '0.00'}</p>
+               </div>
+            </div>
+          </div>
+        )}
+        {type === 'bioimpedance' && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Peso Total (kg)</label>
+                <input type="number" step="0.1" onChange={e => setData({...data, weight: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 outline-none focus:border-brand-primary" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">% Gordura</label>
+                <input type="number" step="0.1" onChange={e => setData({...data, fatPercentage: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 outline-none focus:border-brand-primary" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Massa Magra (kg)</label>
+                <input type="number" step="0.1" onChange={e => setData({...data, muscleMass: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 outline-none focus:border-brand-primary" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">Gordura Visceral</label>
+                <input type="number" onChange={e => setData({...data, visceralFat: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 outline-none focus:border-brand-primary" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">% Água (Hidratação)</label>
+                <input type="number" step="0.1" onChange={e => setData({...data, hydration: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 outline-none focus:border-brand-primary" />
+            </div>
+          </div>
+        )}
+        {type === 'vo2max' && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">VO2 Max (ml/kg/min)</label>
+                <input type="number" step="0.1" onChange={e => setData({...data, vo2max: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 outline-none focus:border-brand-primary" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">FC Limiar (bpm)</label>
+                <input type="number" onChange={e => setData({...data, thresholdHeartRate: Number(e.target.value)})} className="w-full bg-gray-900 p-3 rounded-xl border border-gray-800 outline-none focus:border-brand-primary" />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[8px] font-black text-gray-600 uppercase">FC Máxima (bpm)</label>
+                <input type="number" onChange={e => setData({...data, maxHeartRate: Number(e.target.value)})} className="w-full bg-gray-950 p-3 rounded-xl border border-gray-800 outline-none focus:border-brand-primary" />
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="flex gap-4 pt-2">
+        <Button onClick={onCancel} variant="secondary" className="flex-grow">Cancelar</Button>
+        <Button onClick={() => onSave(type, data)} className="flex-grow">Computar Protocolo</Button>
+      </div>
+    </Card>
+  );
+};
+
+const WorkoutLive: FC<{ workout: Workout; onCancel: () => void; onFinish: (w: Workout) => void }> = ({ workout, onCancel, onFinish }) => {
+  const [currentWorkout, setCurrentWorkout] = useState<Workout>({
+    ...workout,
+    status: 'in_progress',
+    durationMinutes: 60,
+    rpe: 5,
+    exercises: workout.exercises.map(ex => ({ ...ex, performedSets: ex.performedSets || [] }))
+  });
+
+  const recordSet = (exId: string, w: number, r: number, rpe: number) => {
+    const updated = currentWorkout.exercises.map(ex => {
+      if (ex.id === exId) {
+        return { ...ex, performedSets: [...(ex.performedSets || []), { reps: r, weight: w, rpe }] };
+      }
+      return ex;
+    });
+    setCurrentWorkout({ ...currentWorkout, exercises: updated });
+    toast.success("Série registrada!");
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/98 z-[300] flex flex-col p-6 md:p-12 overflow-y-auto backdrop-blur-3xl animate-in fade-in zoom-in duration-300">
+      <div className="max-w-4xl mx-auto w-full flex-grow flex flex-col">
+        <div className="flex justify-between items-start mb-12">
+          <div>
+            <h2 className="text-4xl font-black text-brand-secondary uppercase italic tracking-tighter leading-none">Coleta em Tempo Real</h2>
+            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-2">{workout.name} • <span className="text-brand-primary">{workout.phase}</span></p>
+          </div>
+          <Button onClick={onCancel} variant="secondary">Interromper</Button>
+        </div>
+
+        <div className="space-y-8 mb-16">
+          {currentWorkout.exercises.map((ex, idx) => (
+            <Card key={ex.id} title={`${idx+1}. ${ex.name}`} className="border-l-8 border-brand-primary bg-gray-900/40">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+                 {(ex.performedSets || []).map((set, sidx) => (
+                   <div key={sidx} className="bg-gray-950 p-3 rounded-2xl text-center text-[10px] font-black border border-gray-800 shadow-inner animate-in fade-in zoom-in">
+                     <p className="text-gray-600 uppercase text-[8px] mb-1">Série {sidx+1}</p>
+                     <p className="text-white">{set.reps} x {set.weight}kg</p>
+                     <p className="text-brand-secondary mt-1">RPE {set.rpe}</p>
+                   </div>
+                 ))}
+              </div>
+              
+              <div className="flex flex-wrap items-end gap-3 pt-6 border-t border-gray-800">
+                 <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-600 uppercase ml-1">Carga (kg)</label>
+                    <input id={`w-${ex.id}`} type="number" placeholder="0" className="bg-gray-950 p-4 rounded-2xl w-24 outline-none focus:border-brand-primary border border-gray-800 text-sm font-black text-white" />
+                 </div>
+                 <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-600 uppercase ml-1">Reps</label>
+                    <input id={`r-${ex.id}`} type="number" placeholder="0" className="bg-gray-950 p-4 rounded-2xl w-20 outline-none focus:border-brand-primary border border-gray-800 text-sm font-black text-white" />
+                 </div>
+                 <div className="space-y-1">
+                    <label className="text-[8px] font-black text-gray-600 uppercase ml-1">RPE (1-10)</label>
+                    <input id={`rp-${ex.id}`} type="number" min="1" max="10" placeholder="5" className="bg-gray-950 p-4 rounded-2xl w-20 outline-none focus:border-brand-primary border border-gray-800 text-sm font-black text-white" />
+                 </div>
+                 <Button onClick={() => {
+                    const wInput = document.getElementById(`w-${ex.id}`) as HTMLInputElement;
+                    const rInput = document.getElementById(`r-${ex.id}`) as HTMLInputElement;
+                    const rpInput = document.getElementById(`rp-${ex.id}`) as HTMLInputElement;
+                    const w = Number(wInput.value);
+                    const r = Number(rInput.value);
+                    const rp = Number(rpInput.value);
+                    if (w > 0 && r > 0 && rp >= 1 && rp <= 10) {
+                      recordSet(ex.id, w, r, rp);
+                      wInput.value = ''; rInput.value = ''; rpInput.value = '';
+                    } else {
+                      toast.error("Insira métricas válidas.");
+                    }
+                 }} variant="primary" className="mb-[2px]">Salvar Série</Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <Card title="Finalização de Sessão" className="space-y-8 mt-auto mb-10 shadow-2xl border border-brand-primary/20">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="space-y-4">
+                 <div className="flex justify-between items-center">
+                    <span className="font-black text-gray-400 uppercase text-[10px] tracking-widest">Esforço da Sessão (sRPE)</span>
+                    <span className="text-4xl font-black text-brand-secondary italic">{currentWorkout.rpe}</span>
+                 </div>
+                 <input type="range" min="1" max="10" value={currentWorkout.rpe} onChange={e => setCurrentWorkout({...currentWorkout, rpe: Number(e.target.value)})} className="w-full h-3 bg-gray-900 rounded-full appearance-none cursor-pointer accent-brand-secondary" />
+              </div>
+              <div className="space-y-4">
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Duração Total (Minutos)</label>
+                <input type="number" value={currentWorkout.durationMinutes} onChange={e => setCurrentWorkout({...currentWorkout, durationMinutes: Number(e.target.value)})} className="w-full bg-gray-950 border border-gray-800 rounded-3xl p-5 text-lg font-black text-white focus:border-brand-primary outline-none transition-all shadow-inner" />
+              </div>
+           </div>
+           <Button onClick={() => onFinish(currentWorkout)} variant="accent" className="w-full py-8 text-xl tracking-[0.3em] shadow-2xl shadow-brand-secondary/30 rounded-[2.5rem]">CONCLUIR PROTOCOLO DE CARGA</Button>
+        </Card>
+      </div>
+    </div>
+  );
+};
 
 export default App;
