@@ -1,6 +1,7 @@
 {
   "name": "avaliacoes-lbsports",
   "version": "1.0.0",
+  "type": "module",
   "description": "Athlete performance tracking system",
   "main": "server.js",
   "engines": {
