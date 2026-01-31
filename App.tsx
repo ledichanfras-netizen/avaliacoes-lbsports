@@ -240,7 +240,7 @@ const AssessmentComparison: FC<{ athlete: Athlete }> = ({ athlete }) => {
 
 // --- MAIN APP ---
 const App: FC = () => {
-  const { athletes, loading, addAthlete, addWellness, addWorkout, updateWorkout, addAssessment, addTestAthlete, analyzePerformance } = useAthletes();
+  const { athletes, loading, isCloud, addAthlete, addWellness, addWorkout, updateWorkout, addAssessment, addTestAthlete, analyzePerformance } = useAthletes();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'dash' | 'training' | 'assessment'>('dash');
   const [aiInsight, setAiInsight] = useState<string | null>(null);
@@ -286,6 +286,10 @@ const App: FC = () => {
             </div>
           </div>
           <div className="flex gap-3 items-center w-full sm:w-auto">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${isCloud ? 'border-brand-secondary/30 bg-brand-secondary/5 text-brand-secondary' : 'border-red-500/30 bg-red-500/5 text-red-500'} transition-all`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${isCloud ? 'bg-brand-secondary animate-pulse' : 'bg-red-500'}`}></div>
+              <span className="text-[8px] font-black uppercase tracking-widest">{isCloud ? 'Cloud Sync On' : 'Local Mode'}</span>
+            </div>
             <Button onClick={() => setModalState({ type: 'athlete' })} variant="secondary" className="px-4 py-2 shrink-0">+ Atleta</Button>
             <select 
               className="flex-grow sm:flex-grow-0 bg-gray-800 border border-gray-700 rounded-2xl px-5 py-3 text-sm font-bold min-w-[200px] outline-none transition-all focus:border-brand-primary"
