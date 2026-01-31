@@ -1,9 +1,15 @@
 
-const express = require('express');
-const { Pool } = require('pg');
-const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
+import express from 'express';
+import pkg from 'pg';
+const { Pool } = pkg;
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -249,10 +255,13 @@ app.post('/api/salvar', async (req, res) => {
 });
 
 // Serve frontend estático em produção
-app.use(express.static(path.join(__dirname, '.')));
+const distPath = path.join(__dirname, 'dist');
+app.use(express.static(distPath));
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  // Se existir a pasta dist, serve o index.html de lá, senão serve do root (para dev/fallback)
+  const indexPath = path.join(distPath, 'index.html');
+  res.sendFile(indexPath);
 });
 
 app.listen(port, () => {
