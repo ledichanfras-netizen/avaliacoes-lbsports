@@ -14,6 +14,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
 
+if (!process.env.DATABASE_URL) {
+  console.warn('AVISO: DATABASE_URL não encontrada. O banco de dados não funcionará corretamente.');
+}
+
 // Configuração do Banco de Dados (Render usa DATABASE_URL)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -22,15 +26,13 @@ const pool = new Pool({
   }
 });
 
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+// Função para inicializar o banco de dados
+const initDB = async () => {
+  if (!process.env.DATABASE_URL) return;
 
-// --- API ROUTES ---
-
-// Rota de Setup (Inicialização do Banco)
-app.get('/api/setup', async (req, res) => {
   const client = await pool.connect();
   try {
+    console.log('Iniciando configuração do banco de dados...');
     await client.query('BEGIN');
     await client.query(`
       CREATE TABLE IF NOT EXISTS athletes (
@@ -98,12 +100,37 @@ app.get('/api/setup', async (req, res) => {
     await client.query(`CREATE TABLE IF NOT EXISTS vo2max (id TEXT PRIMARY KEY, athlete_id TEXT REFERENCES athletes(id) ON DELETE CASCADE, date VARCHAR(255) NOT NULL, vo2max REAL, max_heart_rate REAL, threshold_heart_rate REAL, max_ventilation REAL, threshold_ventilation REAL, max_load REAL, threshold_load REAL, vam REAL, rec10s REAL, rec30s REAL, rec60s REAL, score REAL, observations TEXT);`);
     
     await client.query('COMMIT');
-    res.json({ message: "Banco de dados configurado com sucesso!" });
+    console.log('Banco de dados configurado com sucesso!');
   } catch (error) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: error.message });
+    console.error('Erro ao configurar banco de dados:', error.message);
   } finally {
     client.release();
+  }
+};
+
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+
+// --- API ROUTES ---
+
+// Rota de Setup Manual (Mantida para compatibilidade)
+app.get('/api/setup', async (req, res) => {
+  try {
+    await initDB();
+    res.json({ message: "Banco de dados configurado com sucesso!" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rota de Health Check
+app.get('/api/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'ok', cloud: true });
+  } catch (error) {
+    res.status(500).json({ status: 'error', cloud: false, message: error.message });
   }
 });
 
@@ -266,4 +293,5 @@ app.get('*', (req, res) => {
 
 app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
+  initDB(); // Inicializa o banco ao subir
 });

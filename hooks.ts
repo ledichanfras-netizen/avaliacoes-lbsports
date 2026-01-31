@@ -8,8 +8,18 @@ import { GoogleGenAI } from "@google/genai";
 export const useAthletes = () => {
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCloud, setIsCloud] = useState(false);
 
   const api = {
+    async checkHealth(): Promise<boolean> {
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        return data.cloud === true;
+      } catch {
+        return false;
+      }
+    },
     async loadAthletes(): Promise<Athlete[]> {
       try {
         const response = await fetch('/api/ler');
@@ -34,7 +44,13 @@ export const useAthletes = () => {
 
   useEffect(() => {
     setLoading(true);
-    api.loadAthletes().then(data => setAthletes(data)).finally(() => setLoading(false));
+    Promise.all([
+      api.loadAthletes(),
+      api.checkHealth()
+    ]).then(([data, health]) => {
+      setAthletes(data);
+      setIsCloud(health);
+    }).finally(() => setLoading(false));
   }, []);
 
   const save = async (newAthletes: Athlete[]) => {
@@ -197,5 +213,5 @@ export const useAthletes = () => {
     }
   };
 
-  return { athletes, loading, addAthlete, addWellness, addWorkout, updateWorkout, copyWorkout, addAssessment, updateAssessment, analyzePerformance, addTestAthlete };
+  return { athletes, loading, isCloud, addAthlete, addWellness, addWorkout, updateWorkout, copyWorkout, addAssessment, updateAssessment, analyzePerformance, addTestAthlete };
 };
